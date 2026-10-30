@@ -477,3 +477,48 @@ bootloader/app checksum 与 validation hash 均 valid。
 - `0x0` 整包 + 手工回写 NVS（`wifi/ssid`、`password`、`ota_url`）后自动重连的完整流程，本轮未跑（设备用 app-only 更新）。
 - 配网高级页 `/advanced` 写 `ota_url` 的端到端行为。
 - 真人（非扬声器）长时间 soak 下的唤醒词误判率。
+
+## 检查点（2026-10-30 09:2x，上下文 ~50%）
+
+- 已完成并验证：服务端三修 + 同音字表（`3651ff1`）、固件重建与发布 `v2.5.3-persona.5`（merged `ecb0c32c…` /
+  app `c5064d8a…`）、板上刷自用 app `038bbb03…`、A 视图恐龙截图证实可见、HANDOFF 与 README 记录已推。
+- 两仓 CI：privacy-scan 绿；MCP host tests 绿于 `3f95a4b`（文档提交未触发）；Build Boards 基建红不追。
+- **进行中**：给项目主页（本仓 `README.md`）写中英双语「使用指导书」，要求写清"哪些信息必须使用者自己填"，
+  并同时修掉 README 里两处过时陈述：① 声称 `XIAOZHI_OTA_BASE` 构建期注入（实测本树不展开）；
+  ② 发布资产仍写 persona.4 app-only / persona.2 带 merged（现为 persona.5 两者都有）。
+- 约束：新文档不得出现 `192.168.x.x`（唯一例外 `192.168.4.1`，privacy-scan 已放行）；一律用 `<server-ip>`。
+- 进度：README 已写完（EN `### Getting started` / ZH `### 使用指导书`，6 步 + 两张表），
+  自查 `git grep -nE '192\.168\.' -- README.md` 只命中放行项 `192.168.4.1`；正在由独立 reviewer
+  逐条对源码核对（命令/键名/配网/发布/tag/中英一致性）。
+- 下一步：reviewer PASS 后 `docs: rewrite the getting-started guide for newcomers` 提交并 push，
+  确认 privacy-scan 绿。
+
+### 检查点 2（2026-10-30 09:26）
+
+- README 双语指导书已写完待改：reviewer **CHANGES（5 项阻塞）**，全部是我写文档时想当然的地方，
+  已核实成立：① `/advanced` 不存在（实际是 `/` 页面的 Advanced 标签，表单 `POST /advanced/submit`；
+  配网成功页会自动 `POST /exit` → `StopConfigAp`，所以 OTA 地址要在提交 Wi-Fi **之前**填）；
+  ② `llm.provider` 默认 `hermes`，没有 `HERMES_API_KEY` 启动即抛；③ matcha 在构造期就建，模型缺失时
+  即使有 VOLC key 也启动失败；④ `build/xiaozhi-build.sdkconfig.defaults` 每次构建被重写，必须
+  fullclean → 重写 → `rm sdkconfig` → `reconfigure` 全序列；⑤ 本仓 venv 没有 esptool，第 3 步前要先 `source export.sh`。
+- 另：`docs/quickstart-single-board.md` 仍在 persona.4 旧口径（2921264/`63c9f7e5`、`/advanced`），与 README 冲突，
+  本轮一并改成 persona.5（2921568/`c5064d8a`，merged `ecb0c32c`）。
+- 已修完（等 reviewer 增量确认）：README 补 `llm.provider`/matcha 模型/视觉（可选）三行、第 2 步给最小
+  config 片段、第 3 步前加 `source export.sh`（esptool 在 IDF 里）、Advanced 改为「`/` 页面标签 + 必须在
+  提交 Wi-Fi 之前」、firmware 段改成 fullclean→重写 fragment→reconfigure 全序列；quickstart 全量换成
+  persona.5（`ecb0c32c…`/`c5064d8a…`），删掉 persona.2/3/4 旧行与 `/advanced` 地址。
+- 下一步：reviewer PASS → 一个 commit 提交 README+quickstart → push → privacy-scan 绿。
+
+### 检查点 3（2026-10-30 09:3x）
+
+- reviewer 增量复核：6 处中 5 处通过，剩 1 处阻塞——README 说"模型下载见 §3.3"，但 §3.3 只有 ASR/VAD，
+  matcha 的 `model_dir`/`vocoder`（启动必需）没有下载来源。正在补 §3.3（或 §3.4）并改指路句。
+- 另有一条非阻塞：`docs/quickstart-single-board.md:168` 仍引旧 commit `9b22121`（重建后历史里没有），
+  改为引 `3f95a4b`。
+- 已补：§3.3 新增「TTS（matcha）」下载小节（两条 `curl -LO` + `tar xjf`）；实测两个 URL `HTTP/2 200`
+  （content-length 75,463,556 / 53,884,024），本地 tarball 首条目为 `matcha-icefall-zh-baker/`，
+  本地 `vocos-22khz-univ.onnx` 字节数与远端 content-length 一致；`quickstart:168` 的旧 commit 改指 `3f95a4b`。
+- reviewer 最终 **PASS**（含端到端：用下载的 matcha+vocoder 实例化 `MatchaTts` 合成成功，20,382 samples @22,050 Hz）。
+  另按其非阻塞建议补了 VAD 直链命令（`asr-models/silero_vad.onnx`，实测 200/643,854 B = 本机文件），
+  并把「当前单 commit」改为「根提交 `3f95a4b`（历史另有 a3980dd 文档提交）」。
+- 下一步：commit（README + quickstart + HANDOFF）→ push → privacy-scan 绿。

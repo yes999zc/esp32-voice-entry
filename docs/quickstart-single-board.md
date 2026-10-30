@@ -59,9 +59,8 @@ curl -s -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
 
 | release | 资产 | 用法 |
 |---|---|---|
-| `v2.5.3-persona.4`（最新） | **`merged-binary.bin` 10164189 B（2026-10-30 追加，`0x0` 整包）+ `xiaozhi.bin` 2921264 B（10-28 的 app-only，未改）+ `SHA256SUMS.txt`（两行）** | 新板烧 `0x0` 整包；已有同款板只升级 app 烧 `0x20000` |
-| `v2.5.3-persona.2` | `merged-binary.bin` 10164189 B（整包）、`generated_assets.bin` 1775581 B、`xiaozhi.bin` **2920928 B**、`SHA256SUMS` | 已有同款板升级只烧 app；**新板可直接整包**（或从源码构建） |
-| `v2.5.3-persona.3` | 同布局：`merged-binary.bin`（整包）、`generated_assets.bin`、`xiaozhi.bin` **2921072 B**、`SHA256SUMS` | 同上 |
+| `v2.5.3-persona.5`（最新，2026-10-30 重建历史后的首个发布） | `merged-binary.bin` 10164189 B（sha256 `ecb0c32c…eff2`，`0x0` 整包）+ `xiaozhi.bin` 2921568 B（sha256 `c5064d8a…a195`）+ `SHA256SUMS.txt`（两行） | 新板烧 `0x0` 整包；已有同款板只升级 app 烧 `0x20000` |
+| 更早的 `persona.2` / `persona.3` / `persona.4` | **已不存在**：仓库在 2026-10-30 重建为单 commit，旧 tag/分支/提交全部删除 | 不要引用旧 tag；回滚锚需另存本地 bin |
 
 - `[已核]` 整包由 `<xiaozhi-repo>/scripts/build.py` 的 `merge_bin()`（`:81-83`）生成（本地
   `build/merged-binary.bin` 头部 `E9 03 …`，即 bootloader image，可 `0x0` 整包烧）。
@@ -99,7 +98,7 @@ cat build/flash_args                                                      # 期�
 
 ```bash
 # 用 release 资产（无需本地构建）
-curl -LO https://github.com/yes999zc/xiaozhi-esp32/releases/download/v2.5.3-persona.4/merged-binary.bin
+curl -LO https://github.com/yes999zc/xiaozhi-esp32/releases/download/v2.5.3-persona.5/merged-binary.bin
 shasum -a 256 merged-binary.bin    # 对比 SHA256SUMS.txt 第一行
 python -m esptool --chip esp32s3 -p <serial-port> -b 460800 write-flash 0x0 merged-binary.bin
 ```
@@ -111,10 +110,10 @@ python -m esptool --chip esp32s3 -p <serial-port> -b 460800 write-flash 0x20000 
 # 或者本地构建后：cd <xiaozhi-repo> && idf.py -p <serial-port> flash   （按 build/flash_args 全量写）
 ```
 
-> ⚠️ `[已核]` 线上这个 app 资产（`xiaozhi.bin` 2921264 B，sha256 `63c9f7e5…4728de4`）里编的是**未展开的
-> 字面量** `${XIAOZHI_OTA_BASE}/xiaozhi/ota/`：只烧它、且设备 NVS 里没有 `ota_url` 时 **OTA 必失败**
-> （设备会拿这个坏 URL 去请求）。只有两种正确用法：先按下面 **C** 写好 NVS `ota_url`，或烧你自己
-> 重编的 app（见本节末尾「构建命令」）。**B 是「换 app」的手段，不是省事的默认路径。**
+> ⚠️ `[已核]` 这个 app 资产（`xiaozhi.bin` 2921568 B，sha256 `c5064d8a…a195`）里编的是**占位域名**
+> `http://rui-ota.invalid:4411/xiaozhi/ota/`（RFC 2606 保留域名，永不解析）：只烧它、且设备 NVS 里
+> 没有 `ota_url` 时 **OTA 必失败**（设备会拿这个地址去请求）。只有两种正确用法：先按下面 **C** 写好
+> NVS `ota_url`，或烧你自己重编的 app（见本节末尾「构建命令」）。**B 是「换 app」的手段，不是省事的默认路径。**
 
 **C. 只改 OTA 地址：写 NVS 分区 `0x9000`（会清 NVS，需重新配网）**
 
@@ -147,7 +146,8 @@ python -m esptool --chip esp32s3 -p <serial-port> -b 460800 write-flash 0x9000 /
 >   fragment 展开法 —— 跑完下面命令后改 `build/xiaozhi-build.sdkconfig.defaults` 里的 `CONFIG_OTA_URL` 行 →
 >   `rm sdkconfig` → `reconfigure` + `build` + `merge-bin`，并用那里给的 `grep`/`strings` 断言确认。
 > - **② 不重编（改设备 NVS）**：镜像保持原样，用上面 **C**（`scripts/make_nvs_ota.py` 刷 `0x9000`）
->   或配网高级页 `/advanced` 写 `wifi/ota_url`；运行期优先读 NVS（`main/ota.cc:56-62`）。
+>   或配网页上的 **Advanced** 标签（`http://192.168.4.1/` → Advanced，表单 `POST /advanced/submit`；
+>   必须在提交 Wi-Fi 之前填，提交后设备会 `POST /exit` 退出配网）写 `wifi/ota_url`；运行期优先读 NVS（`main/ota.cc:56-62`）。
 
 ```bash
 # 0) 环境（一次性）
@@ -165,7 +165,7 @@ python3 scripts/build.py chd/chd-esp32s3-box \
 # 注意：这一份的 CONFIG_OTA_URL 是未展开占位；要自己的地址请看上面的 ① / ②
 ```
 
-`[已核：本机 IDF 6.1]` 用分支 `9b22121` 跑上面的命令 → exit 0，产出 `build/xiaozhi.bin`（app）与
+`[已核：本机 IDF 6.1]` 用当前历史的根提交 `3f95a4b` 跑上面的命令 → exit 0，产出 `build/xiaozhi.bin`（app）与
 `build/merged-binary.bin` 10164189 B；但镜像里是**字面量** `${XIAOZHI_OTA_BASE}/xiaozhi/ota/`。
 上文提到的 2921280 B / 命中 `rui-ota.invalid` 的那份 A 版，是**再做了一步 fragment 展开**才得到的
 （不是这条命令的直接产物）；把它当成「①②之后的产物」看。
@@ -217,15 +217,34 @@ HF_ENDPOINT=https://hf-mirror.com \
 - `[未验证]` `hf` CLI（`huggingface_hub`）本身的可用性；备选：`git clone https://hf-mirror.com/<repo>` 后把目录放到同一路径。
 - `[已核]` 目录名必须与 `asr.model_dir` 完全一致；本地已有该目录时可直接用。
 
-**VAD（Silero）** `[未验证]`：
+**VAD（Silero）** `[已核：URL 返回 200，2026-10-30]`：
 
-- 需要单个文件 `silero_vad.onnx`。`[已核]` hf-mirror 上**没有**与 sherpa-onnx 完全对应的
-  官方仓库（`csukuangfj/sherpa-onnx-vad` 返回 401；`onnx-community/silero-vad` 提供的是
-  `onnx/model.onnx`，未验证与 sherpa-onnx VAD 的输入/输出兼容）。
-- 可靠来源是 sherpa-onnx 的 GitHub `asr-models` release 里的 `silero_vad.onnx`（本机文件
-  643854 B 即此文件），下载后放到 `<user-home>/AI_Workspace/03_Data/Models/sherpa-onnx/silero_vad.onnx`。
-- 若你已能访问 HuggingFace 镜像，也可自行转存该文件；**不要把 `onnx-community` 的
-  `model.onnx` 直接改名当成 `silero_vad.onnx`**，除非你验证过它能被 sherpa-onnx 加载。
+```bash
+mkdir -p <user-home>/AI_Workspace/03_Data/Models/sherpa-onnx
+curl -L --fail -o <user-home>/AI_Workspace/03_Data/Models/sherpa-onnx/silero_vad.onnx \
+  https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx
+# 期望大小 643854 B
+```
+
+- `[已核]` 这个 release 里的文件就是 sherpa-onnx 要的 `silero_vad.onnx`（本机同一文件 643,854 B）。
+- `[已核]` hf-mirror 上**没有**可直接对应的官方仓库（`csukuangfj/sherpa-onnx-vad` 返回 401；
+  `onnx-community/silero-vad` 提供的是 `onnx/model.onnx`，未验证与 sherpa-onnx VAD 兼容）。
+- **不要**把 `onnx-community` 的 `model.onnx` 直接改名冒充 `silero_vad.onnx`，除非你验证过它能被加载。
+
+**TTS（matcha）** `[已核：URL 返回 200，2026-10-30]`：
+
+```bash
+mkdir -p <user-home>/AI_Workspace/03_Data/Models/sherpa-onnx/tts
+cd <user-home>/AI_Workspace/03_Data/Models/sherpa-onnx/tts
+curl -LO https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-zh-baker.tar.bz2
+tar xjf matcha-icefall-zh-baker.tar.bz2
+curl -LO https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx
+```
+
+- 约 75 MB（tar.bz2）+ 54 MB（onnx）；解压后目录名即 `matcha-icefall-zh-baker`。
+- **这两个文件即使走云端 volc 也必须存在**：`src/tts.py:225` 在构造期无条件创建本地兜底，
+  缺文件时进程启动就抛 `RuntimeError: Load model ... failed`（不会给你一条"仅云端"的路）。
+- 路径要与 `config.local.yaml` 的 `tts.matcha.model_dir`（目录）和 `tts.matcha.vocoder`（文件）完全一致。
 
 ### 3.4 LLM 与 TTS
 
@@ -244,9 +263,10 @@ export DEEPSEEK_API_KEY=<your-key>    # src/llm.py:77-79 读取
 **TTS 二选一** `[已核]`：
 
 - 云端 volc：`tts.provider: volc` + `export VOLC_API_KEY=<your-key>`（`config.example.yaml:61,71`）。
-- 本地 matcha：`tts.provider: matcha`，并准备
+- 本地 matcha：`tts.provider: matcha`，模型下载见 §3.3「TTS（matcha）」；路径填
   `tts.matcha.model_dir`（`.../tts/matcha-icefall-zh-baker`）与
   `tts.matcha.vocoder`（`.../tts/vocos-22khz-univ.onnx`）（`config.example.yaml:74-76`）。
+  注意 volc 也要求这两个文件存在（兜底在启动时构建）。
 - `[已核]` volc 的 key 缺失或请求失败会**自动回落到本地 matcha**，不会让设备静音（缺 key 回落 `src/tts.py:213-225`；运行期失败回落 `:195-205`）。
 
 ### 3.5 配网：SoftAP 热点 + 网页（不是 BLE）
@@ -279,9 +299,10 @@ export DEEPSEEK_API_KEY=<your-key>    # src/llm.py:77-79 读取
    设备连上后会去服务端 `/xiaozhi/ota/` 拿 `ws_url`，再连 4410。
 5. **失败与重试**：连不上会在超时后自动回到配网模式（同 1）；配置页可以再提交一次，不必重启。
    若浏览器缓存/运营商页面拦着，用无痕窗口或直接敲 `http://192.168.4.1/submit`。
-6. **顺手填 OTA 地址（可选，省一次重编）**：配网页的高级页
-   `http://192.168.4.1/advanced`（路由 `:515` `/advanced/config`、`:558` `/advanced/submit`；
+6. **顺手填 OTA 地址（可选，省一次重编）**：配网页 `http://192.168.4.1/` 上的 **Advanced** 标签
+   （数据路由 `:515` `/advanced/config`、提交 `:558` `/advanced/submit`；没有独立的 `/advanced` 地址；
    板级已开 `show_ota_config`，`main/boards/common/wifi_board.cc:59`）可以填 `ota_url`，
+   **要在点「连接 Wi-Fi」之前填**——提交成功后设备会 `POST /exit` 退出配网，页面就没了。
    提交时写进设备 NVS 的 `wifi/ota_url`（`wifi_configuration_ap.cc:599-610`，
    `nvs_open("wifi")` + `nvs_set_str("ota_url", ...)`）。运行期优先于编译进镜像的
    `CONFIG_OTA_URL`（`main/ota.cc:56-62`）。`[源码已核 / 真机端到端未验证]`（本卡不刷机）；
@@ -306,7 +327,7 @@ export DEEPSEEK_API_KEY=<your-key>    # src/llm.py:77-79 读取
 
 ## 已知缺口（本卡不做）
 
-- **factory 镜像已补（`persona.4` 2026-10-30 追加 `merged-binary.bin`）**：新板可 `0x0` 一次烧；
+- **factory 镜像已补（`persona.5` 2026-10-30 首发 `merged-binary.bin`）**：新板可 `0x0` 一次烧；
   但它是**整包、会清 NVS/Wi-Fi**，且编的是占位 OTA 域名（`http://rui-ota.invalid:4411`）。
   因此还缺一份「不清 NVS、自带你自己的 OTA 地址、跨版本通用」的出厂镜像——那需要按
   `XIAOZHI_OTA_BASE` 重编并妥善保管（自用版不入库、不上传）。
