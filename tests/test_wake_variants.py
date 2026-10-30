@@ -45,6 +45,13 @@ VARIANTS = [
     ("好吗小智", 0.5),         # spacing/typo variant, high overlap
     ("小石", 1.0),             # bare variant: the board streams ~1 s after firing
     ("小日", 1.0),
+    # Real SenseVoice output when synthesized "你好小智"/"你好小志"/"你好小石"
+    # were replayed through scripts/fake_device.py (2026-10-30). The homophone
+    # swap is wider than the table above and two of these used to open a turn.
+    ("郝小智。", 1.0),
+    ("好小时。", 1.0),
+    ("高小日。", 1.0),
+    ("小治。", 1.0),          # 治 is the same homophone family; real log line
 ]
 
 COMMANDS = [
@@ -53,6 +60,8 @@ COMMANDS = [
     ("几点了", 0.6),
     ("你好", 0.5),            # greeting: 2 chars must not fuzzy-match a wake word
     ("你好吗", 0.5),          # 3 chars but 0.571 < 0.60
+    ("小日子", 1.0),          # 小日 + 子 is a noun phrase, not the wake word
+    ("小石子", 1.0),
     ("你好，小智，今天天气怎么样", 2.2),   # wake word + real question
 ]
 
@@ -165,3 +174,4 @@ async def test_one_char_stop_command_survives_the_noise_gate():
     # Existing noise-gate contract stays: silence fillers are still rejected.
     assert voice_session._valid_text("啊") is False
     assert voice_session._valid_text("好") is False
+

@@ -169,6 +169,20 @@ _WAKE_KEYS = tuple(dict.fromkeys(
     normalize_wake_text(word) for word in WAKE_WORDS + WAKE_VARIANTS
 ))
 
+# SenseVoice also swaps homophones inside the wake word: 你 is heard as 郝/好/
+# 高, and 智 as 志/石/日/时/识/纸. A 2-4 character line made only of an optional
+# leading homophone plus 小/晓/笑/校 + one of those tails is the wake word, not
+# a question ("郝小智", "好小时", "高小日" were all observed on this board on
+# 2026-10-30 while the table above only had the 小志/小石/小日 spellings).
+_WAKE_TAIL_RE = re.compile(
+    r"^(?:你|尼|泥|郝|好|号|高|搞)?(?:小|晓|笑|校)[智志石时识日纸只制子治]$"
+)
+
+
+def _is_wake_tail(normalized: str) -> bool:
+    return bool(_WAKE_TAIL_RE.match(normalized))
+
+
 
 def match_wake_prefix(text: str) -> str | None:
     """Return the text after a leading wake word, or None when there is none.
@@ -218,6 +232,10 @@ def is_wake_only(text: str, duration_s: float | None = None) -> bool:
     remainder = match_wake_prefix(normalized)
     if remainder is not None:
         return remainder == ""
+    if _is_wake_tail(normalized):
+        # A pure homophone of the wake word: length is irrelevant, the board
+        # streams ~1 s after firing and that segment must never open a turn.
+        return True
     if duration_s is None or duration_s >= WAKE_ONLY_MAX_SECONDS:
         return False
     if not WAKE_ONLY_MIN_CHARS <= len(normalized) <= WAKE_ONLY_MAX_CHARS:
@@ -229,6 +247,7 @@ def is_wake_only(text: str, duration_s: float | None = None) -> bool:
 # noise gate must keep rejecting. A stop command is the exception: losing it
 # makes the board look deaf exactly when the user wants it to stop.
 _SHORT_COMMANDS = frozenset({"停"})
+
 
 
 # SenseVoice/Whisper silence hallucinations that look like plausible text. They
