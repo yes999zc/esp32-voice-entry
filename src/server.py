@@ -13,6 +13,7 @@ from llm import Llm
 from session import Session, active_sessions
 from tts import build_tts
 import mute
+import netguard
 import ota
 import vision
 
@@ -26,6 +27,14 @@ def load_config(path: Path) -> dict:
 
 async def main(config_path: Path):
     cfg = load_config(config_path)
+    # Single-instance gate: both ports must be free before any expensive init.
+    # launchd KeepAlive would otherwise restart a second instance every 10 s and
+    # turn one bind failure into a traceback loop (2026-10-30). Exits with a
+    # single "[fatal] port ..." line and status 1.
+    host = cfg["server"].get("host") or "0.0.0.0"
+    port = int(cfg["server"]["port"])
+    ota_port = int(cfg["server"]["ota_port"])
+    netguard.ensure_ports_free(host, (port, ota_port))
     # The single mute truth: loaded before the first session can connect, then
     # injected into both the 4410 pipeline and the 4411 control handlers.
     mute_cfg = cfg.get("mute") or {}
@@ -72,21 +81,28 @@ async def main(config_path: Path):
     # means "reuse the control token" so no extra secret has to be managed.
     cfg["server"]["vision_token"] = ota.effective_vision_token(cfg, control_token)
 
-    host, port = cfg["server"]["host"], cfg["server"]["port"]
-    ota_runner = await ota.start(cfg,
-                                extras=(vision.make_router(cfg, active_sessions, tts=tts,
-                                                           resample=resample,
-                                                           mute_state=mute_state),),
-                                control_token=control_token)
-    # The board spends most of its life in Wi-Fi modem sleep and answers a ping
-    # hundreds of milliseconds late (measured 789-840 ms round trip against 5-10 ms
-    # awake). The library defaults are 20 s / 20 s, which is fine for a laptop but
-    # turns a sleepy device into a flapping connection; be generous instead.
-    async with serve(handler, host, port, max_size=1 << 20,
-                     ping_interval=30, ping_timeout=90):
-        print(f"[ready] ws://{host}:{port}", flush=True)
-        await stop.wait()
-    await ota_runner.cleanup()
+    # A bind can still be lost to another process that grabbed the port between
+    # the probe and listen(); report it exactly like the pre-flight failure.
+    ota_runner = None
+    try:
+        ota_runner = await ota.start(cfg,
+                                     extras=(vision.make_router(cfg, active_sessions, tts=tts,
+                                                                resample=resample,
+                                                                mute_state=mute_state),),
+                                     control_token=control_token)
+        # The board spends most of its life in Wi-Fi modem sleep and answers a ping
+        # hundreds of milliseconds late (measured 789-840 ms round trip against 5-10 ms
+        # awake). The library defaults are 20 s / 20 s, which is fine for a laptop but
+        # turns a sleepy device into a flapping connection; be generous instead.
+        async with serve(handler, host, port, max_size=1 << 20,
+                         ping_interval=30, ping_timeout=90):
+            print(f"[ready] ws://{host}:{port}", flush=True)
+            await stop.wait()
+    except OSError as exc:
+        netguard.handle_bind_error(exc, host, (port, ota_port))
+    finally:
+        if ota_runner is not None:
+            await ota_runner.cleanup()
     print("[exit]", flush=True)
 
 
