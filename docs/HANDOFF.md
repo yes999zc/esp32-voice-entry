@@ -416,3 +416,64 @@ bootloader/app checksum 与 validation hash 均 valid。
   且已公开索引，改写收益低）。
 - **规则**（写给以后）：任何"检测敏感串"的脚本，其模式里 **不许出现敏感串本身**；要用 secret/环境变量注入，
   并在 PR 里写明"本文件不含真实值"。
+
+## 真机语音链路收口（2026-10-30 白天）
+
+两仓均已按"删除重建"处理：`esp32-voice-entry` HEAD 为单根提交 `365e340` + 本轮修复提交；
+`xiaozhi-esp32` HEAD 为单根提交 `3f95a4b`；本地旧 branch/tag/stale remote refs 全部删除，
+`git rev-list --all` = 1；旧历史只留在 `02_Archive/repo-backups-20261030/*.bundle`（600，永不推送）。
+重建时曾误把 `build-chd/`（含内网 OTA 地址）收进第一个提交，privacy-scan 当场抓红，已 `--amend` 覆盖。
+
+### 服务端三处修复（`src/session.py` / `src/netguard.py` / `src/server.py`）
+
+| 症状 | 根因（一句话） | 修复 | 验证 |
+|---|---|---|---|
+| 多实例抢 4411 → Traceback 循环 | 失败方把 `OSError(EADDRINUSE)` 抛成 traceback，launchd KeepAlive 每 10s 重拉 | 新增 `src/netguard.py`：起服务前探测两个端口，被占则打印单行 `[fatal] port N already in use` + exit 1；bind 竞态同样单行退出（`server.py:33-37/101-104`） | 真机环境实测第二实例：`rc=1`、单行 fatal、无 Traceback、fatal 前无 `[init]`；空闲端口可正常 `[ready]` |
+| 唤醒词变体被当命令 | `strip_wake` 只做字面前缀匹配，ASR 的 `小石/小日/郝小智/好小时/高小日/小治` 落到 `_valid_text` 后进 LLM | 正规化（NFKC+去标点+小写）+ 变体表 + 同音尾词正则 `[你/好/郝/高]?[小/晓][智志石时识日纸只制子治]`；短段 <0.8s 且相似度 ≥0.60（≥3 字）也判 wake-only | `tests/test_wake_variants.py` 表驱动（5 个指定变体 + 3 个真机 ASR 输出 + 反例）；`fake_device` 回放 5 个变体 → 全部 `wake-only, no turn`、TTS 帧 0 |
+| 静音开/关后 listen 状态错乱 | mute 切换时设备发的 abort 爆发在"muted 且无 turn 无 speaking"时是空转，却会 cancel 在飞的 turn | muted 且 idle 时忽略 abort（只记日志）；真 abort（speaking / turn 在飞）仍走 `_interrupt()`；mute 关闭首帧重置 session 计数 | `tests/test_mute_abort.py`；真机 + fake_device：静音时发问无轮次，解除后 3 轮 `[turn] done`（带间隔，避免 barge-in 干扰） |
+
+**已知限制（`[未验证]`/未修）**：`VAD` 缓冲在 mute 期间不清，跨静音的首段可能带 mute 前音频（仅注释更正，
+行为修复留给后续卡）；纯扬声器回放时 ASR 仍可能把整句听成 `好小我想你` 这类碎片，字符表无法覆盖，
+现场偶发一次"答非所问"，未计入本轮验收。
+
+### 固件与 A 视图恐龙
+
+- 代码层面 A 视图底部恐龙条是**正常**的：`dino_root_` 建在 `(0,273) 480×47`，`ApplyViewLayout` 的 `is_a`
+  分支 `remove_flag(HIDDEN)` + `move_foreground`，`ADinoTick` 每 80ms 再确认；四类隐藏点（非 A / media /
+  speaking / subtitle）都是瞬时门。`git diff` 显示该文件与设备上"恐龙可见"的旧树一致。
+- **结论：现场"恐龙消失"是板上跑旧镜像所致**，不是当前代码缺陷。刷本轮 app 后，A 视图截图
+  （`snapshot-20261030-091034.jpg`，MCP `self.screen.snapshot` → `/debug/upload`）左下恐龙 + 仙人掌可见。
+- 因此**没有为恐龙改固件代码**（不制造假修复）。A 视图初始状态稳定：`phase_b_view_` 默认 `kA`、无 NVS 持久化。
+
+### 固件产物（commit `3f95a4b`，ESP-IDF v6.1，变体 `chd-esp32s3-box-lcd35`）
+
+| 产物 | 字节 | sha256 | 用途 |
+|---|---|---|---|
+| 公开 merged | 10,164,189 | `ecb0c32c1179e70c07d6f27679219e8e01861faf7ff6d04ca4f80f7255efeff2` | `0x0` 整包 |
+| 公开 app | 2,921,568 | `c5064d8a3d6c25cf80ee29fffa275a6fb55189f263356d9543fb47beb083a195` | `0x20000` |
+| 自用 merged | 10,164,189 | `22a4d4924ed3ab6e41a9133fb718c7a6f1c0d8f4fc13f8841a132773f7592d8a` | 归档，不发布 |
+| 自用 app（已刷板） | 2,921,568 | `038bbb0335a54ba395c043a4d0d6254e8fdabc4b9cca68fced8a017ab1e15198` | 含真实 OTA 地址 |
+
+分区（从 merged `0x8000` 解出）：`nvs 0x9000/16K`、`otadata 0xd000/8K`、`phy_init 0xf000/4K`、
+`ota_0 0x20000/4032K`、`ota_1 0x410000/4032K`、`assets 0x800000/8M`；NVS 区 16,384 B 全 `0xFF`。
+校验：app 段 `cmp` exit 0；`image_info` bootloader ESP32-S3/checksum `0x16` valid、app ESP32-S3/checksum `0xaf` valid。
+公开镜像 `strings`：`rui-ota.invalid` ×1、无 `${XIAOZHI_OTA_BASE}`、无内网 IP；自用镜像含真实地址 ×1。
+
+### 发布
+
+- tag `v2.5.3-persona.5`（pre-release）→ https://github.com/yes999zc/xiaozhi-esp32/releases/tag/v2.5.3-persona.5
+- 资产：`merged-binary.bin`（digest 与本地一致）、`xiaozhi.bin`、`SHA256SUMS.txt`（2 行）。
+- 说明写明三种刷法（`0x0` 清 NVS / `0x20000` 保留 NVS / NVS `ota_url` 改 OTA），并注明占位地址 `rui-ota.invalid`。
+
+### 真机验证（本机，2026-10-30 09:0x–09:1x）
+
+- 服务重启后单实例监听 4410/4411；第二实例被单实例保护拦下。
+- `fake_device` 回放：5 个唤醒变体 → `wake-only, no turn`；静音 ON 时无轮次；解除后 3 轮 `[turn] done`。
+- Mac 扬声器自激：`你好小智，现在几点` → `好小志现在几点？` → 剥前缀 → 正确回答时间（`[llm] 现在9点13分…`）。
+- 设备 OTA 正常（`[ota] xiaozhi v2.5.3 -> ws://<server-ip>:4410`），app-only 刷写未动 NVS。
+
+### 仍属 [未验证]
+
+- `0x0` 整包 + 手工回写 NVS（`wifi/ssid`、`password`、`ota_url`）后自动重连的完整流程，本轮未跑（设备用 app-only 更新）。
+- 配网高级页 `/advanced` 写 `ota_url` 的端到端行为。
+- 真人（非扬声器）长时间 soak 下的唤醒词误判率。
