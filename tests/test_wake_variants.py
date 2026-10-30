@@ -43,12 +43,16 @@ VARIANTS = [
     ("好小日。", 0.06),        # 0.06 s line from the log - fuzzy match
     ("你好小日", 0.7),
     ("好吗小智", 0.5),         # spacing/typo variant, high overlap
+    ("小石", 1.0),             # bare variant: the board streams ~1 s after firing
+    ("小日", 1.0),
 ]
 
 COMMANDS = [
     ("停", 0.5),
     ("别说了", 0.7),
     ("几点了", 0.6),
+    ("你好", 0.5),            # greeting: 2 chars must not fuzzy-match a wake word
+    ("你好吗", 0.5),          # 3 chars but 0.571 < 0.60
     ("你好，小智，今天天气怎么样", 2.2),   # wake word + real question
 ]
 

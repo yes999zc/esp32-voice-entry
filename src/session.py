@@ -151,7 +151,7 @@ def strip_wake(text: str) -> str:
 # nobody asked (``[asr] 你好，小石。`` -> LLM).
 WAKE_VARIANTS = (
     "你好小石", "你好小日", "好小日", "好小智", "好小志",
-    "小智", "小志", "晓智",
+    "小智", "小志", "晓智", "小石", "小日",
 )
 def normalize_wake_text(text: str) -> str:
     """Fold an ASR line to the form the wake table is written in.
@@ -196,11 +196,12 @@ def _wake_similarity(text: str) -> float:
 # longer gets the benefit of the doubt, because a real one-word command
 # ("停"/"别说了") can be short too - those match a wake word poorly anyway.
 WAKE_ONLY_MAX_SECONDS = 0.8
-# 0.55 is the lowest ratio that still catches the heard-on-this-board variant
-# ``好小日`` against ``你好小日`` (0.857) and ``你好小妹``-style greetings (0.50)
-# stay below it. Short text only: a long sentence that merely starts similar
-# must still reach the model.
-WAKE_ONLY_MIN_SIMILARITY = 0.55
+# 0.60 catches the heard-on-this-board variants (``好小日`` vs ``你好小日`` =
+# 0.857, ``你好小石`` = 0.75) while loose greetings stay out: ``你好`` (0.667)
+# and ``你好吗`` (0.571) are real things to answer, not a wake word. The 3-char
+# floor removes the 2-char case outright, and 0.60 the 3-char one.
+WAKE_ONLY_MIN_SIMILARITY = 0.60
+WAKE_ONLY_MIN_CHARS = 3
 WAKE_ONLY_MAX_CHARS = 6
 
 
@@ -219,7 +220,7 @@ def is_wake_only(text: str, duration_s: float | None = None) -> bool:
         return remainder == ""
     if duration_s is None or duration_s >= WAKE_ONLY_MAX_SECONDS:
         return False
-    if len(normalized) > WAKE_ONLY_MAX_CHARS:
+    if not WAKE_ONLY_MIN_CHARS <= len(normalized) <= WAKE_ONLY_MAX_CHARS:
         return False
     return _wake_similarity(normalized) >= WAKE_ONLY_MIN_SIMILARITY
 
@@ -895,9 +896,10 @@ class Session:
         elif kind == "abort":
             if self._abort_is_echo_of_mute():
                 # The board emits a burst of aborts around a mute toggle
-                # (2026-10-30: 5-24 per toggle). With nothing running they were
-                # no-ops that still churned the log and, when a turn happened to
-                # be in flight, cancelled it for no user-visible reason.
+                # (2026-10-30: 5-24 per toggle). This only covers the muted AND
+                # idle case: nothing to stop, so the burst is pure log churn.
+                # A turn in flight or TTS playing still goes through
+                # `_interrupt()` - that path is deliberately untouched.
                 self.log("[abort] ignored while muted and idle:", msg.get("reason"))
                 return
             self.log("[abort]", msg.get("reason"))
@@ -937,7 +939,13 @@ class Session:
         return self.turn is None or self.turn.done()
 
     def _reset_listen_window(self) -> None:
-        """Drop half-finished listen/answer state after a muted stretch."""
+        """Clear the session's half-finished listen/answer counters.
+
+        Scope note: the VAD lives in `run()` as a local and is not touched here,
+        and no audio was fed to it while muted, so its buffer is already clean.
+        What can go stale is session bookkeeping - when the first answer audio
+        started, whether a reply is ready, and the barge counters.
+        """
         self._first_audio_at = None
         self._reply_ready = False
         if not self.speaking:
