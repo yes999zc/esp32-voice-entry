@@ -1,9 +1,11 @@
 """Per-connection pipeline: hello -> VAD -> ASR -> LLM -> TTS -> Opus frames."""
 import asyncio
+import difflib
 import json
 import random
 import re
 import time
+import unicodedata
 import uuid
 import shutil
 import subprocess
@@ -141,6 +143,93 @@ def strip_wake(text: str) -> str:
     return out
 
 
+# Same wake word, as SenseVoice actually hears it on this board (2026-10-30):
+# 小智 -> 小志 / 小石 / 小日 / 晓智, and the leading 你 sometimes disappears.
+# These must be rejected as "wake only" for the same reason as WAKE_WORDS: the
+# board keeps streaming for ~1 s after it fires, so the segment carries the wake
+# word alone, and sending that to the model produced answers to a question
+# nobody asked (``[asr] 你好，小石。`` -> LLM).
+WAKE_VARIANTS = (
+    "你好小石", "你好小日", "好小日", "好小智", "好小志",
+    "小智", "小志", "晓智",
+)
+def normalize_wake_text(text: str) -> str:
+    """Fold an ASR line to the form the wake table is written in.
+
+    NFKC makes full-width forms (Ｈｉ / ０) equal to ASCII, lower-casing makes the
+    English wake spellings case-insensitive, and dropping every non-alphanumeric
+    character removes the punctuation/space variants ASR sprinkles in
+    (``你好，小智。`` -> ``你好小智``).
+    """
+    folded = unicodedata.normalize("NFKC", text or "").lower()
+    return "".join(ch for ch in folded if ch.isalnum())
+
+
+_WAKE_KEYS = tuple(dict.fromkeys(
+    normalize_wake_text(word) for word in WAKE_WORDS + WAKE_VARIANTS
+))
+
+
+def match_wake_prefix(text: str) -> str | None:
+    """Return the text after a leading wake word, or None when there is none.
+
+    Longest match first so ``小智小智`` is consumed as two wake words rather than
+    leaving ``小智`` behind as a "command".
+    """
+    normalized = normalize_wake_text(text)
+    for key in sorted(_WAKE_KEYS, key=len, reverse=True):
+        if normalized.startswith(key):
+            return normalized[len(key):]
+    return None
+
+
+def _wake_similarity(text: str) -> float:
+    normalized = normalize_wake_text(text)
+    if not normalized:
+        return 0.0
+    return max(difflib.SequenceMatcher(None, normalized, key).ratio()
+               for key in _WAKE_KEYS)
+
+
+# A segment shorter than this cannot hold a question after the wake word: the
+# board fires on "你好小智" and the same ~0.8 s segment reaches ASR. Anything
+# longer gets the benefit of the doubt, because a real one-word command
+# ("停"/"别说了") can be short too - those match a wake word poorly anyway.
+WAKE_ONLY_MAX_SECONDS = 0.8
+# 0.55 is the lowest ratio that still catches the heard-on-this-board variant
+# ``好小日`` against ``你好小日`` (0.857) and ``你好小妹``-style greetings (0.50)
+# stay below it. Short text only: a long sentence that merely starts similar
+# must still reach the model.
+WAKE_ONLY_MIN_SIMILARITY = 0.55
+WAKE_ONLY_MAX_CHARS = 6
+
+
+def is_wake_only(text: str, duration_s: float | None = None) -> bool:
+    """True when the segment is the wake word (or a misheard variant of it).
+
+    Exact wake prefixes (``你好，小智。``) are always wake-only regardless of
+    length. Fuzzy matching is deliberately narrow - short segment AND high
+    character overlap with a wake key - so real short commands keep working.
+    """
+    normalized = normalize_wake_text(text)
+    if not normalized:
+        return True
+    remainder = match_wake_prefix(normalized)
+    if remainder is not None:
+        return remainder == ""
+    if duration_s is None or duration_s >= WAKE_ONLY_MAX_SECONDS:
+        return False
+    if len(normalized) > WAKE_ONLY_MAX_CHARS:
+        return False
+    return _wake_similarity(normalized) >= WAKE_ONLY_MIN_SIMILARITY
+
+
+# One-character utterances are usually silence fillers ("啊"/"好"), which the
+# noise gate must keep rejecting. A stop command is the exception: losing it
+# makes the board look deaf exactly when the user wants it to stop.
+_SHORT_COMMANDS = frozenset({"停"})
+
+
 # SenseVoice/Whisper silence hallucinations that look like plausible text. They
 # must be rejected after ASR, because the (now looser) energy gate cannot tell
 # them apart from quiet speech. Matched on alphanumeric-normalised text, so
@@ -155,7 +244,7 @@ _HALLUCINATION_MARKERS = (
 def _valid_text(text: str) -> bool:
     """Reject noise segments: too short, punctuation-only, or a known hallucination."""
     stripped = "".join(ch for ch in text if ch.isalnum())
-    if len(stripped) < 2:
+    if len(stripped) < 2 and stripped not in _SHORT_COMMANDS:
         return False
     normalized = "".join(ch for ch in text.lower() if ch.isalnum())
     return not any(marker in normalized for marker in _HALLUCINATION_MARKERS)
@@ -878,6 +967,13 @@ class Session:
             text = await asyncio.get_running_loop().run_in_executor(
                 None, self.asr.transcribe, seg, self.cfg["audio"]["sample_rate"])
             raw_text = text
+            # Wake-word judgement comes first and is punctuation/case folded, so
+            # the misheard variants (小志/小石/小日) never reach `_valid_text` as
+            # a "command": no stt frame, no model call, no turn, no state left.
+            if is_wake_only(raw_text, seg_seconds):
+                self.log("[asr] wake-only, no turn:", repr(raw_text))
+                await self._restore_cue_face("rejected")
+                return
             text = strip_wake(text)
             if not _valid_text(text):
                 reason = "wake-only" if raw_text != text else "noise"
