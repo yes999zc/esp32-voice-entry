@@ -1,0 +1,93 @@
+=== one-wake acceptance run 20261027-220859 ===
+log: docs/face/one-wake-20261027-220859/run.log
+
+--- [1/4] probe: is a session live? ---
+sent=1
+
+--- [2/4] faces + preview + blink (face_check.py) ---
+$ .venv313/bin/python scripts/face_check.py --blink
+[1/3] 探活：POST http://127.0.0.1:4411/debug/emotion neutral
+      活会话 1 个
+[2/3] 连拍 8 张：目标间隔 375 ms（约 3 s，眨眼只有 ~150 ms）
+      等 0.5 s 让探活的 neutral 过渡结束
+      8 张完成，总跨度 2894 ms
+[3/3] 判定（Pillow 不可用：MD5 + 文件大小）
+      docs/face/blink-01.jpg: 13923 bytes md5=33aaa62b t=0 ms
+      docs/face/blink-02.jpg: 13923 bytes md5=33aaa62b t=376 ms
+      docs/face/blink-03.jpg: 13923 bytes md5=33aaa62b t=755 ms
+      docs/face/blink-04.jpg: 13923 bytes md5=33aaa62b t=1135 ms
+      docs/face/blink-05.jpg: 13923 bytes md5=33aaa62b t=1515 ms
+      docs/face/blink-06.jpg: 13923 bytes md5=33aaa62b t=1895 ms
+      docs/face/blink-07.jpg: 13923 bytes md5=33aaa62b t=2275 ms
+      docs/face/blink-08.jpg: 10604 bytes md5=bde882dc t=2655 ms
+      不同 MD5：2 组；最大体积差：31.30%
+疑似捕捉到眨眼（需人工看图确认）
+      报告：docs/face/blink-report.md
+
+--- [2b/4] 真实回答期间的屏幕取样（说话脸 + 字幕）---
+$ .venv313/bin/python scripts/face_check.py --turn 今天天气怎么样？请用两三句话说一下。 --turn-seconds 14 --out-dir docs/face/one-wake-20261027-220859
+text turn '今天天气怎么样？请用两三句话说一下。' -> 1 session(s); sampling 14s
+      t+ 0.19s -> docs/face/one-wake-20261027-220859/turn-01.jpg (7134 bytes)
+      t+ 1.38s -> docs/face/one-wake-20261027-220859/turn-02.jpg (10604 bytes)
+      t+ 2.58s -> docs/face/one-wake-20261027-220859/turn-03.jpg (13141 bytes)
+      t+ 3.85s -> docs/face/one-wake-20261027-220859/turn-04.jpg (15747 bytes)
+      t+ 5.04s -> docs/face/one-wake-20261027-220859/turn-05.jpg (18255 bytes)
+      t+ 6.28s -> docs/face/one-wake-20261027-220859/turn-06.jpg (19237 bytes)
+      t+ 7.53s -> docs/face/one-wake-20261027-220859/turn-07.jpg (19176 bytes)
+      t+ 8.73s -> docs/face/one-wake-20261027-220859/turn-08.jpg (13880 bytes)
+      t+ 9.93s -> docs/face/one-wake-20261027-220859/turn-09.jpg (15484 bytes)
+      t+11.14s -> docs/face/one-wake-20261027-220859/turn-10.jpg (13586 bytes)
+      t+12.37s -> docs/face/one-wake-20261027-220859/turn-11.jpg (15124 bytes)
+      t+13.57s -> docs/face/one-wake-20261027-220859/turn-12.jpg (15063 bytes)
+报告：docs/face/one-wake-20261027-220859/turn-report-220917.md（共 12 张）
+
+--- [3/4] keepalive soak 15 min (leave the board alone) ---
+$ .venv313/bin/python scripts/face_check.py --soak 15 --out-dir docs/face/one-wake-20261027-220859
+soak: 15 分钟，每分钟采样一次（ESTABLISHED + /debug/emotion）
+      22:09:17 established=1 sent=1
+      22:10:17 established=1 sent=1
+      22:11:17 established=1 sent=1
+      22:12:17 established=1 sent=1
+      22:13:17 established=1 sent=1
+      22:14:17 established=1 sent=1
+      22:15:17 established=1 sent=1
+      22:16:17 established=1 sent=1
+      22:17:18 established=1 sent=1
+      22:18:18 established=1 sent=1
+      22:19:18 established=1 sent=1
+      22:20:18 established=1 sent=1
+      22:21:18 established=1 sent=1
+      22:22:18 established=1 sent=1
+      22:23:18 established=1 sent=1
+      22:24:17 established=1 sent=1
+报告：docs/face/one-wake-20261027-220859/soak-20261027-222417.md
+
+--- [4/4] proactive status ---
+{"enabled": true, "dry_run": true, "socket_alive": true, "now": "2026-10-27T22:24:17", "night": "23:00-08:00", "today": {"attempts": 0, "spoke": 0, "face_only": 0, "no_session": 0, "dry_run": 0, "rejected": {}}, "hourly": {"used": 0, "limit": 2}, "muted_until": null, "last_human_speech_at": "2026-10-27T22:08:54", "last_emotion_sent_at": null, "last_spoke_at": null, "recent": []}{
+    "enabled": true,
+    "dry_run": true,
+    "socket_alive": true,
+    "now": "2026-10-27T22:24:17",
+    "night": "23:00-08:00",
+    "today": {
+        "attempts": 0,
+        "spoke": 0,
+        "face_only": 0,
+        "no_session": 0,
+        "dry_run": 0,
+        "rejected": {}
+    },
+    "hourly": {
+        "used": 0,
+        "limit": 2
+    },
+    "muted_until": null,
+    "last_human_speech_at": "2026-10-27T22:08:54",
+    "last_emotion_sent_at": null,
+    "last_spoke_at": null,
+    "recent": []
+}
+
+=== done. 原始输出：docs/face/one-wake-20261027-220859/run.log
+=== 截图与 soak 报告：docs/face/one-wake-20261027-220859
+=== 需要人看一眼的：step1-*.jpg（表情与字幕观感）、soak-*.md 的结论行

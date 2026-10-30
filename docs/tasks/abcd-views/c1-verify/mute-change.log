@@ -1,0 +1,12 @@
+=== 2026-10-29 23:44:03 CST BASELINE ===
+{'muted': True, 'since': '2026-10-29T22:48:30', 'changed_by': 'http', 'updated_at': '2026-10-29T22:48:30'}
+=== 2026-10-29 23:44:04 CST UNMUTE (9哥授权路径) ===
+{'ok': True, 'changed': True, 'muted': False, 'since': None}
+
+=== 2026-10-29 23:47:36 CST RESTORE (target muted=true, baseline 22:48:30) ===
+GET before:
+{'muted': False, 'since': None, 'changed_by': 'http', 'updated_at': '2026-10-29T23:44:13'}
+POST muted=true:
+{'ok': True, 'changed': True, 'muted': True, 'since': '2026-10-29T23:47:36'}
+GET after:
+{'muted': True, 'since': '2026-10-29T23:47:36', 'changed_by': 'http', 'updated_at': '2026-10-29T23:47:36'}

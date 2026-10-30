@@ -1,0 +1,3 @@
+# font binaries and generated charsets stay out of git
+build/
+fonts-src/

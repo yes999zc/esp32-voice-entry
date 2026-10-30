@@ -1,0 +1,219 @@
+server:
+  host: 0.0.0.0
+  port: 4410           # 4399 is taken by the LX06 service on this host
+  ota_port: 4411       # the firmware asks this for its websocket URL
+  ws_url: ws://<mac-lan-ip>:4410   # what the device is told to connect to
+  vision_url: http://<mac-lan-ip>:4411/xiaozhi/vision  # where take_photo POSTs
+  vision_token: ""     # empty = reuse the control token below; set to override
+  timezone_minutes: 480
+  device_token: ""     # empty = no auth (LAN only)
+
+# Control-plane auth for the 4411 HTTP app. Only POST /xiaozhi/ota/,
+# GET /notify/{name} and GET /screen/{name} stay anonymous; every other route
+# needs `Authorization: Bearer <control token>`. The token is never stored in
+# this repo: it comes from env ESP32_CONTROL_TOKEN, else from the file below,
+# which is auto-generated with 32 random bytes (0600, directory 0700) on first
+# start when neither exists. Rotate by deleting the file and restarting.
+security:
+  control_token_file: ~/.esp32-voice/control.token
+
+# Server-side mute switch (B1, mode A). `/debug/mute` and `scripts/mute.py`
+# flip it; the 4410 Session drops every uplink frame before Opus decode, so no
+# VAD/ASR/LLM/TTS/turn can start. The board keeps capturing and uploading in
+# this mode (only a firmware change can stop the microphone - B2), which is why
+# every status response says mode A explicitly.
+mute:
+  path: ~/.esp32-voice/mute.json   # 0600, atomic replace; missing = unmuted
+  log_interval_s: 60               # one [mute] frames_in=... line per minute
+  catchup_window_min: 10           # on unmute: only items due in this window
+  catchup_max_items: 2             # ... and at most this many, one sentence
+
+audio:
+  sample_rate: 16000
+  frame_ms: 60         # 960 samples per Opus frame
+  channels: 1
+  # Off by default (zero overhead). When true, every handled VAD segment is
+  # written as WAV to docs/segments/<timestamp>/ for offline tuning of the noise
+  # gate (task-26). Capped at 60 segments / 20 MB; local only, gitignored.
+  capture_segments: false
+  device_volume: 85    # MCP self.audio_speaker.set_volume on connect; 0 = leave alone
+                       # 60 sounded quiet on this board (9哥, 2026-10-27); 85 keeps headroom for
+                       # the wake chime without clipping loud TTS peaks.
+
+vad:
+  model: ~/AI_Workspace/03_Data/Models/sherpa-onnx/silero_vad.onnx
+  # 0.5 s end-of-speech hangover. This is already below rui's production
+  # vad_end_silence_ms=600 (house-ear src/rui/config/schema.py:331-374), and an
+  # earlier board test showed < 0.45 s cuts mid-sentence pauses, so it stays.
+  # Note the hangover happens before `[seg]`; the server's "first frame" log is
+  # measured from segment close, so real end-to-speech latency is ~0.5 s more.
+  min_silence: 0.5
+  # 0.1 -> 0.25 s (2026-10-27). rui runs 200 ms; we pick 250 ms because a
+  # 0.16-0.25 s room-noise blip was still becoming a segment here. Re-measure on
+  # the board before moving it again (real speech segments were 0.62-1.97 s).
+  min_speech: 0.25
+  max_speech: 30.0
+
+asr:
+  model_dir: ~/AI_Workspace/03_Data/Models/sherpa-onnx/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17
+
+tts:
+  provider: volc       # volc | matcha | siliconflow
+  speed: 1.05
+  # 豆包语音合成 2.0 (Volcano Engine). The key never lives in this repo: it is
+  # read from env VOLC_API_KEY, else ~/.hermes/.env. Missing key or a failed/
+  # timed-out request falls back to the local matcha model with a WARN line, so
+  # the device is never muted by the cloud path.
+  volc:
+    base_url: https://openspeech.bytedance.com/api/v3/tts/unidirectional
+    voice: zh_female_xiaohe_uranus_bigtts   # 小荷 2.0 (20 voices family)
+    resource_id: seed-tts-2.0
+    api_key_env: VOLC_API_KEY
+    sample_rate: 16000   # device pipeline is 16 kHz; session resamples if needed
+    timeout: 9        # per sentence; was 30 s, and four of those would stall a turn
+  matcha:
+    model_dir: ~/AI_Workspace/03_Data/Models/sherpa-onnx/tts/matcha-icefall-zh-baker
+    vocoder: ~/AI_Workspace/03_Data/Models/sherpa-onnx/tts/vocos-22khz-univ.onnx
+  siliconflow:
+    voice: FunAudioLLM/CosyVoice2-0.5B:claire
+    model: FunAudioLLM/CosyVoice2-0.5B
+
+llm:
+  provider: hermes   # deepseek | hermes
+  model: deepseek-flash
+  hermes:
+    base_url: http://127.0.0.1:8642/v1
+    model: hermes-agent
+  max_tokens: 400
+  history_rounds: 6
+  routing:                 # small talk -> fast model, work -> the agent
+    enabled: true
+    model: deepseek-flash
+    max_chars: 20
+  stream_tts: true          # speak each sentence as the model produces it
+  device_tools: true      # expose /xiaozhi/device MCP tools to the model
+  max_tool_rounds: 2      # then answer without tools
+  system_prompt: |
+    你是小智（唤醒词「你好小智」），一个放在桌面上的语音助手。回答必须是口语，先给结论，最多三句话。
+    不要念 markdown、不要念 URL、不要列编号清单。用户听不见标点。
+    不知道就说不知道，不要编。被问你是谁、叫什么名字，就说我是小智；不要自称语音助手或模型名。
+    后台是 Hermes（hermes-agent），当前版本 {hermes_version}，模型 {hermes_model}。
+    只有用户明确问「后台是什么/什么模型/Hermes 版本/你怎么连的」时，才说明由 Hermes 驱动，
+    并直接回答这个版本；不要猜。平时不要主动提模型。
+    用户让你截屏、把屏幕画面显示出来时，必须立刻调用 show_screen 工具；不要只说「我去办」，
+    也不要假装已经截了。
+    需要长时间操作的事情，说一句"我去办"，不要解释过程。
+    存在待确认动作时（例如重启、升级、改配置），不要声称已经执行，也不要自己重复调用工具；
+    只请用户明确说「确认」或「取消」。
+    设备能力：你能调用板子的摄像头拍照、调音量、调屏幕亮度。
+    家居控制：灯的实体类型不统一。儿童房是 light.*（主灯/筒灯）。书房、客厅、主卧、餐厅、厨房等是 switch.*，
+    命名形如 `<房间>-主灯`、`<房间>-筒灯`。用户说「关/开 X 的灯」时：先 ha_list_entities(domain='switch')
+    按房间名匹配，再 ha_call_service switch.turn_off / switch.turn_on；儿童房优先查 light.*。
+    不要因为 light 域里没找到某个房间的灯，就说只能关书房或只能关某个房间。
+
+conversation:
+  timeout_seconds: 30
+  max_reply_chars: 300
+  echo_probe: false          # true = log the 20 ms sub-frame RMS distribution
+                             # (p50/p90/p99/max + histogram) at the end of every
+                             # playback and on a barge. Calibration only; leave off.
+  barge_in: true              # interrupt us while we are speaking
+  barge_rms: 0.008           # Measured 2026-10-27 (/tmp/barge-soak.log, two 18-19 s
+                             # answers with nobody speaking): self-echo while TTS
+                             # plays is 60 ms frame RMS p50 0.0006 / p90 0.0008 /
+                             # max 0.0011, i.e. ~0.0017 as 20 ms peaks (x1.5 crest).
+                             # A person interrupting ("等一下") measured 0.0348 as a
+                             # 20 ms peak, onset->stop 0.192 s (4 x 60 ms frames of
+                             # audio). 0.008 = 4.7x above the echo peak and 4.3x
+                             # below the person peak. Do not lower it back towards
+                             # the echo; an earlier 0.004 let half-sentences through.
+  barge_min_ms: 240           # sustained speech needed before we stop
+  barge_guard_ms: 350         # ignore the first frames of playback
+  filler_after_seconds: 1.8   # legacy spoken filler only (face & chime disabled)
+  # The delay mask leads the answer instead of trailing it: fire this long after
+  # the segment closes (sanitised to 0-400 ms; 400 is the acceptance ceiling).
+  # Skipped with `face cue skipped (answer ready)` when the reply is queued.
+  proactive_chime_lead_ms: 300
+  # Visual delay mask (default): switch the face to this emotion once, 300 ms
+  # after the segment closes. Empty string = no cue. The cue restores itself via
+  # cue_restore_face on first audio / rejected segment / turn end;
+  # kDeviceStateSpeaking only calls SetStatus, not SetEmotion
+  # (application.cc:1138-1147), so the state flow does NOT overwrite it.
+  thinking_face: "thinking"
+  # The cue owns its lifetime: restore this face when the real answer starts,
+  # when the segment is rejected, or at turn end (empty string = never restore).
+  # Needed because kDeviceStateSpeaking only calls SetStatus, not SetEmotion
+  # (application.cc:1138-1147); nothing else would clear "thinking" mid-answer.
+  # C1a: "idle" (native idle -> neutral.eaf). "neutral" is winking.eaf on the
+  # C1 emote map, so it would not match the idle face between turns.
+  cue_restore_face: "idle"
+  # Optional audio cue. 0 = silent (default). 9哥 2026-10-27: the screen already
+  # shows the state and subtitles, so a "da" only steals attention. Set 160 to
+  # restore the 160 ms chime (rui reference: house-ear src/rui/audio/chime.py,
+  # MIT); >300 clamps, 1-19 ms disables, non-numbers fall back to 160.
+  filler_chime_ms: 0
+  # Legacy spoken filler, only used when filler_chime_ms: 0 (rollback escape
+  # hatch). Left empty so startup does not pre-synthesize three sentences.
+  filler_phrases: []
+
+# Device camera: the firmware POSTs a JPEG to server.vision_url when
+# self.camera.take_photo runs. Description runs on the local oMLX server.
+vision:
+  base_url: http://127.0.0.1:9981/v1
+  model: Qwen3-VL-4B-Instruct-4bit
+  api_key_env: OMLX_API_KEY
+  api_key_file: ~/.hermes/keys/omlx.key   # key value never lives in the repo
+  timeout: 60
+
+safety:
+  confirm_timeout: 120
+  # C2 echo guard (P0, 2026-10-28): the board's microphone hears its own TTS.
+  # A confirm-shaped ASR segment whose speech STARTED less than this long after
+  # the confirmation prompt finished playing is treated as echo: the action is
+  # not executed, the pending entry is kept and the prompt is NOT repeated.
+  # The incident: the prompt tail was transcribed as 「确认。」, the segment
+  # closed ~0.5 s after tts end (VAD hangover) and rebooted the board.
+  # 300-500 ms is the safe band; a real user cannot answer that fast.
+  confirm_echo_guard_ms: 400
+  # Firmware tool names, verified against xiaozhi-esp32 PROJECT_VER 2.5.3 (must
+  # match `mcp_server.cc` verbatim: a typo here silently disables the spoken
+  # confirmation gate on BOTH /debug/tool and /debug/mcp):
+  #   self.reboot                   main/mcp_server.cc:132
+  #   self.upgrade_firmware         main/mcp_server.cc:146
+  #   self.assets.set_download_url  main/mcp_server.cc:319
+  #   self.system.reconfigure_wifi  main/boards/chd/chd-esp32s3-box/chd_esp32s3_box_board.cc:757
+  confirm_tools:
+    - self.reboot
+    - self.upgrade_firmware
+    - self.assets.set_download_url
+    - self.system.reconfigure_wifi
+
+# Proactive v0 (M7 Step 3): the board may speak first, but only for four
+# whitelisted triggers (task done / scheduled reminder / answer ready /
+# confirm-pending timeout) and only when all seven gates pass. Gates are checked
+# in a fixed order (no_session -> idle_quiet -> human_silence -> night ->
+# topic_cooldown -> hourly_limit -> manual_mute). The card said "six gates"
+# because it counted the six content/quiet gates; no_session is the seventh and
+# is checked first, since without a live session nothing can be delivered.
+# Every attempt is counted and
+# logged as one `[proactive] {...}` line. The face is pushed first, then the
+# server waits `emotion_lead_ms` before speaking (>= 600 ms per the card).
+proactive:
+  enabled: true
+  # dry_run: run gates -> face -> wait, then stop before speech. Counters and
+  # rate-limit windows still consume, so this is a safe production rehearsal.
+  dry_run: true                # restored after D4 partial 2026-10-28 19:5x
+  worker: true                 # false = no ticker; /debug/proactive/status still works
+  night_start: "23:00"         # night quiet window [start, end), wraps midnight
+  night_end: "08:00"
+  hourly_limit: 2              # non-requested announcements per rolling hour
+  topic_cooldown_min: 30       # same topic not repeated inside this window
+  mute_minutes: 30             # 「别说了」 silence duration
+  emotion_lead_ms: 600         # face -> speech lead; never below 600
+  human_silence_seconds: 10    # gate 2: quiet time after the user spoke
+  # Deferred announcements (task result / late reply the user never heard).
+  # Defaults live in `ProactiveConfig` (src/proactive.py:79-81) and are repeated
+  # here so the tunables are visible; an invalid value falls back per key.
+  pending_ttl_min: 30          # drop an unspoken item after this long (expired++)
+  pending_max: 5               # hard queue cap; oldest dropped (dropped++)
+  pending_retry_seconds: 30    # wait before retrying an item a gate rejected

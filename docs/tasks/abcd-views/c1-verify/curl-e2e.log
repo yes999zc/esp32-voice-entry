@@ -1,0 +1,65 @@
+=== C1 capture start 2026-10-29 23:44:23 CST session-mute=False ===
+CMD 2026-10-29 23:44:23 curl -s -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"name":"self.screen.set_view","arguments":{"view":0}}' http://127.0.0.1:4411/debug/mcp
+RESP {"sent": 1, "name": "self.screen.set_view"}
+snapshot[A1] attempt=1 sent=1 resp={"sent": 1, "name": "self.screen.snapshot"}
+UPLOAD[A1] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234426.jpg
+FETCH[A1] /debug/photo/snapshot-20261029-234426.jpg -> HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-A1-20261029-234423.jpg
+FILE[A1] 39164 bytes sha256=e540607770390aafe49cc2dc5732f805845e94d1cff129dc65b20d1e1e394ba5
+snapshot[A2] attempt=1 sent=1 resp={"sent": 1, "name": "self.screen.snapshot"}
+UPLOAD[A2] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234428.jpg
+FETCH[A2] /debug/photo/snapshot-20261029-234428.jpg -> HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-A2-20261029-234423.jpg
+FILE[A2] 39314 bytes sha256=5f49c4d65a9aa4d333f4f4dcc0408fbc28485cd72918d8a69186b793c5962e41
+CMD 2026-10-29 23:44:29 curl -s -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"name":"self.screen.set_view","arguments":{"view":1}}' http://127.0.0.1:4411/debug/mcp
+RESP {"sent": 1, "name": "self.screen.set_view"}
+snapshot[B] attempt=1 sent=1 resp={"sent": 1, "name": "self.screen.snapshot"}
+UPLOAD[B] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234431.jpg
+FETCH[B] /debug/photo/snapshot-20261029-234431.jpg -> HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-B-20261029-234423.jpg
+FILE[B] 32469 bytes sha256=ea7e6ff027944e0b20f5ba0dc85a744ac4b55170c3aa29e7710bda13f01bfdf6
+CMD 2026-10-29 23:44:31 curl -s -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"name":"self.screen.set_view","arguments":{"view":2}}' http://127.0.0.1:4411/debug/mcp
+RESP {"sent": 1, "name": "self.screen.set_view"}
+snapshot[C] attempt=1 sent=1 resp={"sent": 1, "name": "self.screen.snapshot"}
+UPLOAD[C] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234434.jpg
+FETCH[C] /debug/photo/snapshot-20261029-234434.jpg -> HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-C-20261029-234423.jpg
+FILE[C] 44245 bytes sha256=c7ed522f16f651073d778550dc04b6e9d2cf2c372e48b441157792219f384edf
+CMD 2026-10-29 23:44:34 curl -s -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{"name":"self.screen.set_view","arguments":{"view":3}}' http://127.0.0.1:4411/debug/mcp
+RESP {"sent": 1, "name": "self.screen.set_view"}
+snapshot[D1] attempt=1 sent=1 resp={"sent": 1, "name": "self.screen.snapshot"}
+UPLOAD[D1] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234436.jpg
+FETCH[D1] /debug/photo/snapshot-20261029-234436.jpg -> HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-D1-20261029-234423.jpg
+FILE[D1] 23836 bytes sha256=38b0d3984a02d6b94f67a6878dcb5e7d9eb9b83a36cade7a8a4f1f64dd6d653a
+snapshot[D2] attempt=1 sent=1 resp={"sent": 1, "name": "self.screen.snapshot"}
+UPLOAD[D2] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234440.jpg
+FETCH[D2] /debug/photo/snapshot-20261029-234440.jpg -> HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-D2-20261029-234423.jpg
+FILE[D2] 23898 bytes sha256=6c0c74522274ab7b66c47894cf04a459cedfe95d89646b9044036e07b0431434
+=== C1 capture done 2026-10-29 23:44:41 CST ===
+=== D short-interval pair 2026-10-29 23:45:15 ===
+snapshot[D3] resp={"sent": 1, "name": "self.screen.snapshot"}
+upload[D3] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234515.jpg
+snapshot[D4] resp={"sent": 1, "name": "self.screen.snapshot"}
+upload[D4] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234517.jpg
+burst1 23:45:32.3N /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234532.jpg -> view-Dburst1-234532.jpg
+burst2 23:45:33.3N /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234533.jpg -> view-Dburst2-234533.jpg
+burst3 23:45:34.3N /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234534.jpg -> view-Dburst3-234534.jpg
+burst4 23:45:35.3N /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234535.jpg -> view-Dburst4-234535.jpg
+=== C1 post-reboot capture start 2026-10-29 23:46:47 CST ===
+CMD 2026-10-29 23:46:47 set_view view=0
+RESP {"sent": 1, "name": "self.screen.set_view"}
+snapshot[A-reboot] attempt=1 sent=1
+UPLOAD[A-reboot] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234649.jpg
+FETCH[A-reboot] HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-A-reboot-20261029-234647.jpg 34182B sha256=b326f2cc19e919f858feb02280b5caa9163d81b3c0bcf5713a8e67a9f9434638
+CMD 2026-10-29 23:46:49 set_view view=1
+RESP {"sent": 1, "name": "self.screen.set_view"}
+snapshot[B-reboot] attempt=1 sent=1
+UPLOAD[B-reboot] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234652.jpg
+FETCH[B-reboot] HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-B-reboot-20261029-234647.jpg 33499B sha256=43cfacd65790091deeffe10d19201566a7c2b1178dd0645a3f8bfd97c90b063a
+CMD 2026-10-29 23:46:52 set_view view=2
+RESP {"sent": 1, "name": "self.screen.set_view"}
+snapshot[C-reboot] attempt=1 sent=1
+UPLOAD[C-reboot] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234654.jpg
+FETCH[C-reboot] HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-C-reboot-20261029-234647.jpg 36292B sha256=488d5a9f08c5d8bd47fb28a478c0bf459163979b6f4d55ddf8b514f5fee0d4db
+CMD 2026-10-29 23:46:55 set_view view=3
+RESP {"sent": 1, "name": "self.screen.set_view"}
+snapshot[D-reboot] attempt=1 sent=1
+UPLOAD[D-reboot] /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-234657.jpg
+FETCH[D-reboot] HTTP 200 -> /Users/bakeyzhang/AI_Workspace/01_Code/projects/esp32-voice-entry/docs/tasks/abcd-views/c1-verify/view-D-reboot-20261029-234647.jpg 18904B sha256=eefa389f4e834e25411a7b0b31c63a0846c0b95f5fd0355675357e234b71f727
+=== C1 post-reboot capture done 2026-10-29 23:46:58 CST ===

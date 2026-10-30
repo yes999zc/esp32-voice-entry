@@ -1,0 +1,14 @@
+*.pyc
+.venv*/
+.venv/
+__pycache__/
+logs/
+.uvcache/
+docs/segments/
+
+# Local-only secrets / LAN endpoints (never commit)
+config.local.yaml
+config.yaml
+
+# Raw serial logs stay local (privacy-scan: LAN IPs/SSID)
+docs/tasks/**/serial-*.log

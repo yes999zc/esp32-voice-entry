@@ -1,0 +1,388 @@
+1:ESP-ROM:esp32s3-20210327
+3:rst:0x15 (USB_UART_CHIP_RESET),boot:0xa (SPI_FAST_FLASH_BOOT)
+31:I (107) app_init: App version:      2.5.3
+32:I (110) app_init: Compile time:     Oct 28 2026 23:36:05
+33:I (115) app_init: ELF file SHA256:  e9e4c18be...
+163:I (1708) Mute: start: endpoint=http://<nas-ip>:4411 token=stored
+239:I (7188) Application: Network connected
+241:I (7198) Mute: network ready: sync requested
+251:I (7268) Mute: sync ok: muted=1 via GET (next in 1000 ms)
+252:I (7268) Mute: task stack high-water mark=4284 bytes (free, after first sync)
+254:W (7278) Application: mute: server-confirmed muted, capture/uplink held
+268:I (7558) Application: Activation done
+281:I (7618) Application: Startup wake word hint skipped (state=3, wake word running=0, error=0)
+1193:I (270258) CHD_TOUCH: indev state: pressed=1 points=1 x=35 y=22
+1194:I (270398) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1202:I (270768) CHD_TOUCH: indev state: pressed=1 points=1 x=192 y=161
+1203:I (270808) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1211:I (271688) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1219:I (272218) CHD_TOUCH: indev state: pressed=1 points=1 x=198 y=180
+1220:I (272248) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1225:I (272558) CHD_TOUCH: indev state: pressed=1 points=1 x=198 y=182
+1226:I (272618) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1234:I (272778) CHD_TOUCH: indev state: pressed=1 points=1 x=195 y=184
+1236:I (272798) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1241:I (272978) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1246:I (273078) CHD_TOUCH: indev state: pressed=1 points=1 x=185 y=199
+1247:I (273108) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1252:I (273248) CHD_TOUCH: indev state: pressed=1 points=1 x=191 y=202
+1253:I (273278) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1258:I (273488) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1313:I (287108) CHD_TOUCH: indev state: pressed=1 points=1 x=446 y=199
+1315:I (287178) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1320:I (287478) CHD_TOUCH: indev state: pressed=1 points=1 x=426 y=225
+1321:I (287598) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1328:I (287638) Mute: sync ok: muted=0 via POST (next in 300 ms)
+1335:I (287678) CHD_TOUCH: indev state: pressed=1 points=1 x=402 y=243
+1336:I (287718) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1348:I (287808) Application: mute: server-confirmed unmuted, wake word restored
+1388:I (287978) Mute: endpoint http://<nas-ip>:4411
+1392:I (288808) CHD_TOUCH: indev state: pressed=1 points=1 x=240 y=172
+1394:I (288958) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1407:I (290068) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1426:I (290228) Mute: endpoint http://<nas-ip>:4411
+1461:I (305008) CHD_TOUCH: indev state: pressed=1 points=1 x=439 y=207
+1462:I (305158) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1469:I (305218) Mute: sync ok: muted=1 via POST (next in 300 ms)
+1474:W (305238) Application: mute: server-confirmed muted, capture/uplink held
+1491:I (309218) CHD_UI: set view=0
+1506:I (313098) CHD_TOUCH: indev state: pressed=1 points=1 x=425 y=204
+1507:I (313128) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1515:I (313168) Mute: sync ok: muted=0 via POST (next in 300 ms)
+1517:I (313168) Application: mute: server-confirmed unmuted, wake word restored
+1539:I (314238) CHD_TOUCH: indev state: pressed=1 points=1 x=399 y=191
+1541:I (314358) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1551:I (315008) CHD_TOUCH: indev state: pressed=1 points=1 x=429 y=204
+1552:I (315178) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1560:I (315238) Mute: sync ok: muted=1 via POST (next in 300 ms)
+1564:W (315248) Application: mute: server-confirmed muted, capture/uplink held
+1573:I (316058) CHD_TOUCH: indev state: pressed=1 points=1 x=440 y=215
+1574:I (316208) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1582:I (316268) Mute: sync ok: muted=0 via POST (next in 300 ms)
+1584:I (316268) Application: mute: server-confirmed unmuted, wake word restored
+1605:I (316818) CHD_UI: set view=0
+1607:I (317138) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1615:I (317188) Mute: sync ok: muted=1 via POST (next in 300 ms)
+1617:W (317198) Application: mute: server-confirmed muted, capture/uplink held
+1627:I (319108) MCP: Upload snapshot 37283 bytes to http://<nas-ip>:4411/debug/upload
+1631:I (319338) MCP: Snapshot screen result: {"ok": true, "path": "/Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221216.jpg", "bytes": 37283}
+1635:I (319788) CHD_UI: set view=1
+1643:I (322158) MCP: Upload snapshot 33897 bytes to http://<nas-ip>:4411/debug/upload
+1647:I (322358) MCP: Snapshot screen result: {"ok": true, "path": "/Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221219.jpg", "bytes": 33897}
+1651:I (322788) CHD_UI: set view=2
+1660:I (325018) MCP: Upload snapshot 42648 bytes to http://<nas-ip>:4411/debug/upload
+1665:I (325258) MCP: Snapshot screen result: {"ok": true, "path": "/Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221222.jpg", "bytes": 42648}
+1666:I (325648) CHD_UI: set view=3
+1677:I (327928) MCP: Upload snapshot 20985 bytes to http://<nas-ip>:4411/debug/upload
+1683:I (330258) CHD_TOUCH: indev state: pressed=1 points=1 x=66 y=267
+1684:I (330328) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1688:I (333108) CHD_TOUCH: indev state: pressed=1 points=1 x=76 y=250
+1689:I (333218) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1693:I (335678) CHD_TOUCH: indev state: pressed=1 points=1 x=73 y=263
+1694:I (335738) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1699:I (337948) CHD_TOUCH: indev state: pressed=1 points=1 x=60 y=265
+1701:I (338008) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1706:W (338768) Mute: open http://<nas-ip>:4411/debug/mute failed: Connection timed out (timeout, native=116)
+1707:W (338778) Mute: sync failed(network) via GET: last-confirmed muted=1, retry in 2000 ms
+1710:I (340138) CHD_TOUCH: indev state: pressed=1 points=1 x=70 y=250
+1711:I (340158) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1716:I (342408) CHD_TOUCH: indev state: pressed=1 points=1 x=64 y=248
+1717:I (342448) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1720:I (345348) CHD_TOUCH: indev state: pressed=1 points=1 x=56 y=259
+1721:I (345438) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1726:I (348388) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=265
+1727:I (348478) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1735:I (348848) MCP: Upload snapshot 21236 bytes to http://<nas-ip>:4411/debug/upload
+1739:I (348898) MCP: Snapshot screen result: {"ok": true, "path": "/Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221246.jpg", "bytes": 21236}
+1742:I (349748) Mute: sync ok: muted=1 via GET (next in 1000 ms)
+1745:I (350748) CHD_TOUCH: indev state: pressed=1 points=1 x=66 y=268
+1750:I (350828) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1765:I (353968) CHD_TOUCH: indev state: pressed=1 points=1 x=56 y=247
+1766:I (354058) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1775:I (355978) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=250
+1777:I (356088) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1780:I (356378) CHD_UI: set view=3
+1787:I (358648) MCP: Upload snapshot 20729 bytes to http://<nas-ip>:4411/debug/upload
+1793:I (359378) CHD_TOUCH: indev state: pressed=1 points=1 x=57 y=263
+1794:I (359458) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1798:I (361678) CHD_TOUCH: indev state: pressed=1 points=1 x=58 y=255
+1799:I (361768) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1804:I (363598) CHD_TOUCH: indev state: pressed=1 points=1 x=60 y=263
+1806:I (363698) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1810:I (366128) CHD_TOUCH: indev state: pressed=1 points=1 x=60 y=275
+1811:I (366238) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1815:W (368978) Mute: open http://<nas-ip>:4411/debug/mute failed: Connection timed out (timeout, native=116)
+1816:W (368988) Mute: sync failed(network) via GET: last-confirmed muted=1, retry in 2000 ms
+1819:I (369208) CHD_TOUCH: indev state: pressed=1 points=1 x=58 y=268
+1820:I (369278) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1824:I (372258) CHD_TOUCH: indev state: pressed=1 points=1 x=80 y=254
+1825:I (372318) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1829:I (374708) CHD_TOUCH: indev state: pressed=1 points=1 x=68 y=256
+1830:I (374758) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1833:I (376868) CHD_TOUCH: indev state: pressed=1 points=1 x=72 y=254
+1834:I (376928) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1842:I (379348) CHD_TOUCH: indev state: pressed=1 points=1 x=56 y=257
+1843:I (379428) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1848:I (379738) Mute: sync ok: muted=1 via GET (next in 1000 ms)
+1857:I (382168) CHD_TOUCH: indev state: pressed=1 points=1 x=57 y=262
+1859:I (382288) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1871:I (384118) CHD_TOUCH: indev state: pressed=1 points=1 x=58 y=278
+1872:I (384178) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1875:I (384338) CHD_TOUCH: indev state: pressed=1 points=1 x=60 y=268
+1877:I (384378) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1880:I (384518) CHD_TOUCH: indev state: pressed=1 points=1 x=56 y=267
+1881:I (384588) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1887:I (385718) CHD_UI: DINO 60s fps=28 dirty=8896 px
+1892:I (386798) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=271
+1897:I (386898) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1907:I (389858) CHD_TOUCH: indev state: pressed=1 points=1 x=72 y=251
+1909:I (389908) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1954:I (401878) CHD_TOUCH: indev state: pressed=1 points=1 x=71 y=252
+1955:I (401918) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1960:I (403058) MCP: Upload snapshot 23009 bytes to http://<nas-ip>:4411/debug/upload
+1966:I (404578) CHD_TOUCH: indev state: pressed=1 points=1 x=54 y=262
+1967:I (404628) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1971:I (407488) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=266
+1972:I (407548) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1977:I (410428) CHD_TOUCH: indev state: pressed=1 points=1 x=63 y=257
+1978:I (410518) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1984:I (417598) CHD_TOUCH: indev state: pressed=1 points=1 x=382 y=216
+1985:I (417618) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1988:W (418238) Mute: status read failed: Connection timed out (timeout)
+1991:W (418248) Mute: sync failed(network) via GET: last-confirmed muted=1, retry in 2000 ms
+1994:I (420338) CHD_TOUCH: indev state: pressed=1 points=1 x=364 y=225
+1995:I (420448) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+1999:I (422608) CHD_TOUCH: indev state: pressed=1 points=1 x=378 y=223
+2001:I (422688) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2015:I (424248) Mute: sync ok: muted=1 via GET (next in 1000 ms)
+2018:I (425138) CHD_TOUCH: indev state: pressed=1 points=1 x=377 y=215
+2020:I (425158) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2033:I (427438) CHD_TOUCH: indev state: pressed=1 points=1 x=351 y=224
+2034:I (427518) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2043:I (429708) CHD_TOUCH: indev state: pressed=1 points=1 x=367 y=222
+2045:I (429728) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2055:I (432128) CHD_TOUCH: indev state: pressed=1 points=1 x=347 y=221
+2057:I (432188) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2075:I (436178) CHD_TOUCH: indev state: pressed=1 points=1 x=370 y=208
+2076:I (436228) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2089:I (439168) CHD_TOUCH: indev state: pressed=1 points=1 x=68 y=251
+2090:I (439188) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2099:I (441208) CHD_TOUCH: indev state: pressed=1 points=1 x=74 y=258
+2100:I (441248) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2115:I (443808) CHD_TOUCH: indev state: pressed=1 points=1 x=78 y=260
+2117:I (443878) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2123:I (445738) CHD_UI: DINO 60s fps=28 dirty=9001 px
+2131:I (446928) CHD_TOUCH: indev state: pressed=1 points=1 x=64 y=268
+2133:I (446968) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2143:I (449768) CHD_TOUCH: indev state: pressed=1 points=1 x=77 y=263
+2147:I (449858) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2157:I (452488) CHD_TOUCH: indev state: pressed=1 points=1 x=59 y=263
+2158:I (452578) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2170:I (454818) CHD_TOUCH: indev state: pressed=1 points=1 x=53 y=265
+2171:I (454878) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2192:I (460118) MCP: Upload snapshot 24691 bytes to http://<nas-ip>:4411/debug/upload
+2197:I (462488) CHD_TOUCH: indev state: pressed=1 points=1 x=57 y=268
+2198:I (462538) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2202:I (464408) CHD_TOUCH: indev state: pressed=1 points=1 x=80 y=246
+2204:I (464498) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2208:I (467138) CHD_TOUCH: indev state: pressed=1 points=1 x=74 y=256
+2210:I (467198) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2217:W (471098) Mute: open http://<nas-ip>:4411/debug/mute failed: Connection timed out (timeout, native=116)
+2218:W (471108) Mute: sync failed(network) via GET: last-confirmed muted=1, retry in 2000 ms
+2230:I (481248) Mute: sync ok: muted=1 via GET (next in 1000 ms)
+2274:I (493238) MCP: Upload snapshot 24263 bytes to http://<nas-ip>:4411/debug/upload
+2283:W (503528) Mute: open http://<nas-ip>:4411/debug/mute failed: Connection timed out (timeout, native=116)
+2284:W (503538) Mute: sync failed(network) via GET: last-confirmed muted=1, retry in 2000 ms
+2287:I (505748) CHD_UI: DINO 60s fps=28 dirty=8642 px
+2291:I (514038) CHD_TOUCH: indev state: pressed=1 points=1 x=67 y=252
+2293:I (514138) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2303:I (515238) Mute: sync ok: muted=1 via GET (next in 1000 ms)
+2309:I (517088) CHD_TOUCH: indev state: pressed=1 points=1 x=77 y=254
+2311:I (517178) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2324:I (520088) CHD_TOUCH: indev state: pressed=1 points=1 x=64 y=263
+2325:I (520168) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2340:I (522928) CHD_TOUCH: indev state: pressed=1 points=1 x=65 y=255
+2342:I (523048) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2355:I (525878) CHD_TOUCH: indev state: pressed=1 points=1 x=67 y=259
+2356:I (525968) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2358:I (526518) MCP: Upload snapshot 24608 bytes to http://<nas-ip>:4411/debug/upload
+2370:I (528108) CHD_TOUCH: indev state: pressed=1 points=1 x=83 y=252
+2371:I (528168) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2384:I (531168) CHD_TOUCH: indev state: pressed=1 points=1 x=58 y=268
+2385:I (531248) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2400:I (534338) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=259
+2402:I (534428) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2412:I (536548) CHD_TOUCH: indev state: pressed=1 points=1 x=57 y=260
+2413:I (536638) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2422:I (538748) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=257
+2424:I (538828) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2436:I (541308) CHD_TOUCH: indev state: pressed=1 points=1 x=67 y=260
+2437:I (541368) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2450:I (543698) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=260
+2451:I (543788) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2464:I (546418) CHD_TOUCH: indev state: pressed=1 points=1 x=58 y=268
+2466:I (546488) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2476:I (548628) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=270
+2477:I (548698) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2489:I (551358) CHD_TOUCH: indev state: pressed=1 points=1 x=59 y=268
+2490:I (551428) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2502:I (553578) CHD_TOUCH: indev state: pressed=1 points=1 x=74 y=254
+2503:I (553728) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2512:I (556148) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=275
+2513:I (556208) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=241
+2514:I (556218) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=222
+2519:I (556248) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2532:I (558788) CHD_TOUCH: indev state: pressed=1 points=1 x=57 y=255
+2533:I (558848) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2536:I (559578) MCP: Upload snapshot 24394 bytes to http://<nas-ip>:4411/debug/upload
+2547:I (561498) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=265
+2549:I (561588) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=256
+2550:I (561608) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=244
+2551:I (561658) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=229
+2552:I (561678) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=222
+2553:I (561698) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=217
+2556:I (561718) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=215
+2557:I (561758) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=206
+2560:I (561778) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=196
+2561:I (561798) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=177
+2562:I (561818) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=164
+2567:I (561858) CHD_TOUCH: indev state: pressed=1 points=1 x=69 y=67
+2568:I (561918) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2575:I (564008) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2583:I (565758) CHD_UI: DINO 60s fps=28 dirty=8797 px
+2588:I (566878) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=275
+2589:I (566918) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=257
+2590:I (566938) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2601:I (569788) CHD_TOUCH: indev state: pressed=1 points=1 x=59 y=231
+2602:I (569808) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2609:I (570958) CHD_TOUCH: indev state: pressed=1 points=1 x=53 y=262
+2610:I (570978) CHD_TOUCH: indev state: pressed=1 points=1 x=53 y=248
+2611:I (570998) CHD_TOUCH: indev state: pressed=1 points=1 x=53 y=220
+2613:I (571058) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2616:I (571308) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2623:I (571598) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2628:I (571928) CHD_TOUCH: indev state: pressed=1 points=1 x=50 y=286
+2629:I (571948) CHD_TOUCH: indev state: pressed=1 points=1 x=50 y=258
+2630:I (571968) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2636:I (573488) CHD_TOUCH: indev state: pressed=1 points=1 x=64 y=233
+2637:I (573508) CHD_TOUCH: indev state: pressed=1 points=1 x=64 y=205
+2639:I (573528) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2646:I (574648) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=275
+2647:I (574708) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=264
+2648:I (574728) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=237
+2649:I (574748) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=198
+2654:I (574768) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=177
+2655:I (574798) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2665:I (577098) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=262
+2666:I (577118) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=251
+2667:I (577168) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2673:I (577338) CHD_TOUCH: indev state: pressed=1 points=1 x=67 y=246
+2674:I (577358) CHD_TOUCH: indev state: pressed=1 points=1 x=67 y=235
+2675:I (577378) CHD_TOUCH: indev state: pressed=1 points=1 x=67 y=210
+2676:I (577428) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2679:I (577698) CHD_TOUCH: indev state: pressed=1 points=1 x=58 y=215
+2680:I (577718) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2683:I (577948) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=217
+2684:I (577968) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2691:I (579338) CHD_TOUCH: indev state: pressed=1 points=1 x=54 y=238
+2692:I (579358) CHD_TOUCH: indev state: pressed=1 points=1 x=54 y=216
+2693:I (579378) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2697:I (579608) CHD_TOUCH: indev state: pressed=1 points=1 x=51 y=257
+2698:I (579628) CHD_TOUCH: indev state: pressed=1 points=1 x=51 y=231
+2699:I (579648) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2704:I (579878) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=239
+2705:I (579898) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=230
+2706:I (579948) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2709:I (580238) CHD_TOUCH: indev state: pressed=1 points=1 x=60 y=262
+2710:I (580278) CHD_TOUCH: indev state: pressed=1 points=1 x=60 y=250
+2711:I (580308) CHD_TOUCH: indev state: pressed=1 points=1 x=60 y=205
+2715:I (580328) CHD_TOUCH: indev state: pressed=1 points=1 x=60 y=191
+2716:I (580348) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2726:I (582308) CHD_TOUCH: indev state: pressed=1 points=1 x=31 y=308
+2728:I (582368) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2732:I (583358) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=260
+2733:I (583418) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2746:I (586098) CHD_TOUCH: indev state: pressed=1 points=1 x=80 y=250
+2747:I (586118) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2756:I (588728) CHD_TOUCH: indev state: pressed=1 points=1 x=67 y=263
+2758:I (588798) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2768:I (591738) CHD_TOUCH: indev state: pressed=1 points=1 x=55 y=265
+2771:I (591798) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2776:I (592688) MCP: Upload snapshot 24281 bytes to http://<nas-ip>:4411/debug/upload
+2782:W (593368) Mute: open http://<nas-ip>:4411/debug/mute failed: Connection failed (connect_failed, native=12)
+2783:W (593378) Mute: sync failed(network) via GET: last-confirmed muted=1, retry in 2000 ms
+2786:I (594858) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=262
+2788:I (594968) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2794:W (595478) Mute: open http://<nas-ip>:4411/debug/mute failed: Connection failed (connect_failed, native=12)
+2795:W (595488) Mute: sync failed(network) via GET: last-confirmed muted=1, retry in 5000 ms
+2797:I (596608) MCP: Snapshot screen result: {"ok": true, "path": "/Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221654.jpg", "bytes": 24281}
+2801:I (597328) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=263
+2802:I (597368) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=217
+2804:I (597388) CHD_TOUCH: indev state: pressed=1 points=1 x=61 y=179
+2808:I (597408) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2814:I (601398) Mute: sync ok: muted=1 via GET (next in 1000 ms)
+2828:I (604928) CHD_TOUCH: indev state: pressed=1 points=1 x=54 y=281
+2829:I (604968) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2835:I (607098) CHD_TOUCH: indev state: pressed=1 points=1 x=57 y=265
+2836:I (607128) CHD_TOUCH: indev state: pressed=1 points=1 x=57 y=253
+2837:I (607148) CHD_TOUCH: indev state: pressed=1 points=1 x=57 y=224
+2839:I (607198) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2849:I (609248) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=238
+2850:I (609268) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=198
+2854:I (609288) CHD_TOUCH: indev state: pressed=1 points=1 x=62 y=172
+2855:I (609308) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2867:I (611718) CHD_TOUCH: indev state: pressed=1 points=1 x=80 y=245
+2869:I (611818) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2879:I (614558) CHD_TOUCH: indev state: pressed=1 points=1 x=71 y=267
+2881:I (614648) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2892:I (616888) CHD_TOUCH: indev state: pressed=1 points=1 x=63 y=264
+2894:I (616968) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2903:I (619158) CHD_TOUCH: indev state: pressed=1 points=1 x=65 y=228
+2904:I (619198) CHD_TOUCH: indev state: pressed=1 points=1 x=65 y=222
+2906:I (619248) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2916:I (621478) CHD_TOUCH: indev state: pressed=1 points=1 x=66 y=271
+2917:I (621538) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+2928:I (625768) CHD_UI: DINO 60s fps=28 dirty=8916 px
+2970:I (642728) CHD_TOUCH: indev state: pressed=1 points=1 x=166 y=83
+2972:I (642958) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3000:I (648978) CHD_TOUCH: indev state: pressed=1 points=2 x=376 y=54
+3001:I (649058) CHD_TOUCH: indev state: pressed=1 points=2 x=376 y=67
+3002:I (649078) CHD_TOUCH: indev state: pressed=1 points=2 x=376 y=88
+3003:I (649098) CHD_TOUCH: indev state: pressed=1 points=2 x=374 y=100
+3004:I (649118) CHD_TOUCH: indev state: pressed=1 points=2 x=370 y=119
+3008:I (649288) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3022:I (651798) CHD_TOUCH: indev state: pressed=1 points=1 x=341 y=55
+3023:I (651958) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3027:I (652388) CHD_TOUCH: indev state: pressed=1 points=1 x=433 y=135
+3028:I (652448) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3034:I (652668) CHD_TOUCH: indev state: pressed=1 points=1 x=471 y=241
+3035:I (652708) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3038:I (652948) CHD_TOUCH: indev state: pressed=1 points=1 x=413 y=263
+3039:I (653018) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3042:I (653188) CHD_TOUCH: indev state: pressed=1 points=1 x=380 y=299
+3043:I (653228) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3047:I (653408) CHD_TOUCH: indev state: pressed=1 points=1 x=331 y=298
+3048:I (653448) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3055:I (653598) CHD_TOUCH: indev state: pressed=1 points=1 x=292 y=290
+3056:I (653658) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3059:I (653798) CHD_TOUCH: indev state: pressed=1 points=1 x=309 y=289
+3060:I (653908) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3063:I (654008) CHD_TOUCH: indev state: pressed=1 points=1 x=321 y=274
+3064:I (654048) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3073:I (654798) CHD_TOUCH: indev state: pressed=1 points=1 x=250 y=30
+3075:I (654878) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3079:I (655458) CHD_TOUCH: indev state: pressed=1 points=1 x=234 y=20
+3080:I (655528) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3086:I (655878) CHD_TOUCH: indev state: pressed=1 points=1 x=188 y=7
+3088:I (656048) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3091:I (656238) CHD_TOUCH: indev state: pressed=1 points=1 x=214 y=37
+3092:I (656318) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3096:I (656588) CHD_TOUCH: indev state: pressed=1 points=1 x=351 y=260
+3101:I (656728) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3105:I (657228) CHD_TOUCH: indev state: pressed=1 points=1 x=56 y=260
+3107:I (657328) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3114:I (657858) CHD_TOUCH: indev state: pressed=1 points=1 x=50 y=257
+3116:I (657998) CHD_TOUCH: indev state: pressed=1 points=0 x=0 y=0
+3215:I (685798) CHD_UI: DINO 60s fps=27 dirty=8423 px
+3425:I (745828) CHD_UI: DINO 60s fps=27 dirty=8423 px
+3632:I (805838) CHD_UI: DINO 60s fps=27 dirty=8423 px

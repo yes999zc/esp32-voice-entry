@@ -1,0 +1,6 @@
+=== attempt 1 2026-10-29 23:44:09 ===
+probe: {"sent": 1, "name": "self.screen.get_info"}
+SESSION UP after attempt 1
+=== reboot wake attempt 1 2026-10-29 23:46:36 ===
+probe: {"sent": 1, "name": "self.screen.get_info"}
+SESSION UP after attempt 1

@@ -1,0 +1,82 @@
+=== one-wake acceptance run 20261027-215828 ===
+log: docs/face/one-wake-20261027-215828/run.log
+
+--- [1/4] probe: is a session live? ---
+sent=1
+
+--- [2/4] faces + preview + blink (face_check.py) ---
+$ .venv313/bin/python scripts/face_check.py --blink
+[1/3] 探活：POST http://127.0.0.1:4411/debug/emotion neutral
+      活会话 1 个
+[2/3] 连拍 8 张：目标间隔 375 ms（约 3 s，眨眼只有 ~150 ms）
+      等 0.5 s 让探活的 neutral 过渡结束
+      8 张完成，总跨度 2810 ms
+[3/3] 判定（Pillow 不可用：MD5 + 文件大小）
+      docs/face/blink-01.jpg: 10806 bytes md5=894673d5 t=0 ms
+      docs/face/blink-02.jpg: 10806 bytes md5=894673d5 t=380 ms
+      docs/face/blink-03.jpg: 10806 bytes md5=894673d5 t=760 ms
+      docs/face/blink-04.jpg: 10806 bytes md5=894673d5 t=1140 ms
+      docs/face/blink-05.jpg: 10806 bytes md5=894673d5 t=1520 ms
+      docs/face/blink-06.jpg: 10806 bytes md5=894673d5 t=1897 ms
+      docs/face/blink-07.jpg: 10806 bytes md5=894673d5 t=2278 ms
+      docs/face/blink-08.jpg: 7134 bytes md5=d9d70010 t=2658 ms
+      不同 MD5：2 组；最大体积差：51.47%
+疑似捕捉到眨眼（需人工看图确认）
+      报告：docs/face/blink-report.md
+
+--- [2b/4] 真实回答期间的屏幕取样（说话脸 + 字幕）---
+$ .venv313/bin/python scripts/face_check.py --turn 今天天气怎么样？请用两三句话说一下。 --turn-seconds 14 --out-dir docs/face/one-wake-20261027-215828
+text turn '今天天气怎么样？请用两三句话说一下。' -> 1 session(s); sampling 14s
+      t+ 0.18s -> docs/face/one-wake-20261027-215828/turn-01.jpg (10806 bytes)
+      t+ 1.36s -> docs/face/one-wake-20261027-215828/turn-02.jpg (10806 bytes)
+      t+ 2.54s -> docs/face/one-wake-20261027-215828/turn-03.jpg (10806 bytes)
+      t+ 3.72s -> docs/face/one-wake-20261027-215828/turn-04.jpg (10806 bytes)
+      t+ 4.92s -> docs/face/one-wake-20261027-215828/turn-05.jpg (10806 bytes)
+      t+ 6.10s -> docs/face/one-wake-20261027-215828/turn-06.jpg (10806 bytes)
+      t+ 7.26s -> docs/face/one-wake-20261027-215828/turn-07.jpg (10806 bytes)
+      t+ 8.45s -> docs/face/one-wake-20261027-215828/turn-08.jpg (13051 bytes)
+      t+ 9.68s -> docs/face/one-wake-20261027-215828/turn-09.jpg (12147 bytes)
+      t+10.92s -> docs/face/one-wake-20261027-215828/turn-10.jpg (18531 bytes)
+      t+12.13s -> docs/face/one-wake-20261027-215828/turn-11.jpg (18898 bytes)
+      t+13.33s -> docs/face/one-wake-20261027-215828/turn-12.jpg (10686 bytes)
+报告：docs/face/one-wake-20261027-215828/turn-report-215846.md（共 12 张）
+
+--- [3/4] keepalive soak 3 min (leave the board alone) ---
+$ .venv313/bin/python scripts/face_check.py --soak 3 --out-dir docs/face/one-wake-20261027-215828
+soak: 3 分钟，每分钟采样一次（ESTABLISHED + /debug/emotion）
+      21:58:46 established=1 sent=1
+      21:59:46 established=0 sent=0
+      22:00:46 established=0 sent=0
+      22:01:46 established=0 sent=0
+报告：docs/face/one-wake-20261027-215828/soak-20261027-220146.md
+!! soak 判 FAIL —— 对照固件日志 M7KEEPALIVE 的 closed-by-peer / close-channel
+
+--- [4/4] proactive status ---
+{"enabled": true, "dry_run": true, "socket_alive": false, "now": "2026-10-27T22:01:46", "night": "23:00-08:00", "today": {"attempts": 0, "spoke": 0, "face_only": 0, "no_session": 0, "dry_run": 0, "rejected": {}}, "hourly": {"used": 0, "limit": 2}, "muted_until": null, "last_human_speech_at": "2026-10-27T21:59:29", "last_emotion_sent_at": null, "last_spoke_at": null, "recent": []}{
+    "enabled": true,
+    "dry_run": true,
+    "socket_alive": false,
+    "now": "2026-10-27T22:01:46",
+    "night": "23:00-08:00",
+    "today": {
+        "attempts": 0,
+        "spoke": 0,
+        "face_only": 0,
+        "no_session": 0,
+        "dry_run": 0,
+        "rejected": {}
+    },
+    "hourly": {
+        "used": 0,
+        "limit": 2
+    },
+    "muted_until": null,
+    "last_human_speech_at": "2026-10-27T21:59:29",
+    "last_emotion_sent_at": null,
+    "last_spoke_at": null,
+    "recent": []
+}
+
+=== done. 原始输出：docs/face/one-wake-20261027-215828/run.log
+=== 截图与 soak 报告：docs/face/one-wake-20261027-215828
+=== 需要人看一眼的：step1-*.jpg（表情与字幕观感）、soak-*.md 的结论行

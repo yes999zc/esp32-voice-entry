@@ -1,0 +1,361 @@
+{
+ "date": "2026-10-26",
+ "board": "chd-esp32s3-box-lcd35",
+ "firmware": "xiaozhi 2.5.3",
+ "batch1": [
+  {
+   "tag": "status",
+   "name": "self.get_device_status",
+   "args": {},
+   "resp": {
+    "sent": 1,
+    "name": "self.get_device_status",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 6,
+      "result": "{\"audio_speaker\":{\"volume\":90},\"screen\":{\"brightness\":75,\"theme\":\"light\"},\"battery\":{\"level\":100,\"charging\":false},\"network\":{\"type\":\"wifi\",\"ssid\":\"<wifi-ssid>\",\"signal\":\"strong\"}}"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "volume60",
+   "name": "self.audio_speaker.set_volume",
+   "args": {
+    "volume": 60
+   },
+   "resp": {
+    "sent": 1,
+    "name": "self.audio_speaker.set_volume",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 11,
+      "result": "true"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "status_after_vol",
+   "name": "self.get_device_status",
+   "args": {},
+   "resp": {
+    "sent": 1,
+    "name": "self.get_device_status",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 5,
+      "result": "{\"audio_speaker\":{\"volume\":60},\"screen\":{\"brightness\":75,\"theme\":\"light\"},\"battery\":{\"level\":100,\"charging\":false},\"network\":{\"type\":\"wifi\",\"ssid\":\"<wifi-ssid>\",\"signal\":\"strong\"}}"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "volume90",
+   "name": "self.audio_speaker.set_volume",
+   "args": {
+    "volume": 90
+   },
+   "resp": {
+    "sent": 1,
+    "name": "self.audio_speaker.set_volume",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 12,
+      "result": "true"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "brightness30",
+   "name": "self.screen.set_brightness",
+   "args": {
+    "brightness": 30
+   },
+   "resp": {
+    "sent": 1,
+    "name": "self.screen.set_brightness",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 6,
+      "result": "true"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "brightness90",
+   "name": "self.screen.set_brightness",
+   "args": {
+    "brightness": 90
+   },
+   "resp": {
+    "sent": 1,
+    "name": "self.screen.set_brightness",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 10,
+      "result": "true"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "theme_dark",
+   "name": "self.screen.set_theme",
+   "args": {
+    "theme": "dark"
+   },
+   "resp": {
+    "sent": 1,
+    "name": "self.screen.set_theme",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 21,
+      "result": "true"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "theme_light",
+   "name": "self.screen.set_theme",
+   "args": {
+    "theme": "light"
+   },
+   "resp": {
+    "sent": 1,
+    "name": "self.screen.set_theme",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 20,
+      "result": "true"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "display_mode_get",
+   "name": "self.screen.get_display_mode",
+   "args": {},
+   "resp": {
+    "sent": 1,
+    "name": "self.screen.get_display_mode",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 6,
+      "result": "0"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "sysinfo",
+   "name": "self.get_system_info",
+   "args": {},
+   "resp": {
+    "sent": 1,
+    "name": "self.get_system_info",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 9,
+      "result": "{\"version\":2,\"language\":\"zh-CN\",\"flash_size\":16777216,\"minimum_free_heap_size\":\"1055256\",\"mac_address\":\"80:b5:4e:cd:0f:64\",\"uuid\":\"6e24e03f-dbe5-48f7-b59e-9e18ab3947d3\",\"chip_model_name\":\"esp32s3\",\"chip_info\":{\"model\":9,\"cores\":2,\"revision\":2,\"features\":18},\"application\":{\"name\":\"xiaozhi\",\"version\":\"2.5.3\",\"compile_time\":\"Oct 21 2026T19:34:17Z\",\"idf_version\":\"v6.1\",\"elf_sha256\":\"9f6c19fcd0a5927bf9b62ce1a93e16cbf892b7e78290405b26822551459067ca\"},\"partition_table\": [{\"label\":\"nvs\",\"type\":1,\"subtype\":2,\"address\":36864,\"size\":16384},{\"label\":\"otadata\",\"type\":1,\"subtype\":0,\"address\":53248,\"size\":8192},{\"label\":\"phy_init\",\"type\":1,\"subtype\":1,\"address\":61440,\"size\":4096},{\"label\":\"ota_0\",\"type\":0,\"subtype\":16,\"address\":131072,\"size\":4128768},{\"label\":\"ota_1\",\"type\":0,\"subtype\":17,\"address\":4259840,\"size\":4128768},{\"label\":\"assets\",\"type\":1,\"subtype\":130,\"address\":8388608,\"size\":8388608}],\"ota\":{\"label\":\"ota_0\"},\"display\":{\"monochrome\":false,\"width\":480,\"height\":320},\"board\":{\"type\":\"chd-esp32s3-box\",\"name\":\"chd-esp32s3-box-lcd35\",\"manufacturer\":\"chd\",\"ssid\":\"<wifi-ssid>\",\"rssi\":-55,\"channel\":9,\"ip\":\"<device-lan-ip>\",\"mac\":\"80:b5:4e:cd:0f:64\"}}"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "screen_info",
+   "name": "self.screen.get_info",
+   "args": {},
+   "resp": {
+    "sent": 1,
+    "name": "self.screen.get_info",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 12,
+      "result": "{\"width\":480,\"height\":320,\"monochrome\":false}"
+     }
+    ]
+   }
+  }
+ ],
+ "batch2": [
+  {
+   "tag": "photo_before_flip",
+   "name": "self.camera.take_photo",
+   "args": {
+    "question": "一句话说画面里有什么"
+   },
+   "wall_s": 4.04,
+   "resp": {
+    "sent": 1,
+    "name": "self.camera.take_photo",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 4021,
+      "result": "{\"success\": true, \"text\": \"\\u5929\\u82b1\\u677f\\u4e0a\\u51e0\\u76cf\\u706f\\u4eae\\u7740\\uff0c\\u5149\\u7ebf\\u523a\\u773c\\uff0c\\u7167\\u5f97\\u623f\\u95f4\\u4e00\\u7247\\u91d1\\u9ec4\\u3002\", \"path\": \"<home>/.hermes/cache/scratch/esp32-voice/photos/20261026-235756.jpg\"}"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "flip_on",
+   "name": "self.camera.set_camera_flipped",
+   "args": {},
+   "wall_s": 0.04,
+   "resp": {
+    "sent": 1,
+    "name": "self.camera.set_camera_flipped",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 9,
+      "result": "true"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "photo_after_flip",
+   "name": "self.camera.take_photo",
+   "args": {
+    "question": "一句话说画面里有什么"
+   },
+   "wall_s": 1.37,
+   "resp": {
+    "sent": 1,
+    "name": "self.camera.take_photo",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 1334,
+      "result": "{\"success\": true, \"text\": \"\\u5929\\u82b1\\u677f\\u4e0a\\u706f\\u5149\\u592a\\u4eae\\uff0c\\u7167\\u5f97\\u4eba\\u7741\\u4e0d\\u5f00\\u773c\\uff0c\\u8fd8\\u6709\\u4e2a\\u7ea2\\u8272\\u7269\\u4f53\\u5728\\u6643\\u3002\", \"path\": \"<home>/.hermes/cache/scratch/esp32-voice/photos/20261026-235802.jpg\"}"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "flip_back",
+   "name": "self.camera.set_camera_flipped",
+   "args": {},
+   "wall_s": 0.04,
+   "resp": {
+    "sent": 1,
+    "name": "self.camera.set_camera_flipped",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 13,
+      "result": "true"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "snapshot",
+   "name": "self.screen.snapshot",
+   "args": {
+    "url": "http://<mac-lan-ip>:4411/debug/upload",
+    "quality": 80
+   },
+   "wall_s": 0.39,
+   "resp": {
+    "sent": 1,
+    "name": "self.screen.snapshot",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 328,
+      "result": "{\"ok\": false, \"error\": {\"code\": -32603, \"message\": \"Unexpected status code: 500\"}}"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "aec_get",
+   "name": "self.AEC.get_mode",
+   "args": {},
+   "wall_s": 0.04,
+   "resp": {
+    "sent": 1,
+    "name": "self.AEC.get_mode",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 7,
+      "result": "{\"success\": true, \"message\": \"AEC语音打断模式处于开启状态\"}"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "aec_off",
+   "name": "self.AEC.set_mode",
+   "args": {
+    "mode": "kAecOff"
+   },
+   "wall_s": 8.04,
+   "resp": {
+    "sent": 1,
+    "name": "self.AEC.set_mode",
+    "results": [
+     {
+      "session": "1ce403",
+      "ms": 8002,
+      "result": "{\"ok\": false, \"error\": \"device did not answer in time\"}"
+     }
+    ]
+   }
+  },
+  {
+   "tag": "aec_get_off",
+   "name": "self.AEC.get_mode",
+   "args": {},
+   "wall_s": 0.04,
+   "resp": {
+    "sent": 0,
+    "error": "no live session"
+   }
+  },
+  {
+   "tag": "aec_on",
+   "name": "self.AEC.set_mode",
+   "args": {
+    "mode": "kAecOnDeviceSide"
+   },
+   "wall_s": 0.04,
+   "resp": {
+    "sent": 0,
+    "error": "no live session"
+   }
+  },
+  {
+   "tag": "aec_get_on",
+   "name": "self.AEC.get_mode",
+   "args": {},
+   "wall_s": 0.03,
+   "resp": {
+    "sent": 0,
+    "error": "no live session"
+   }
+  }
+ ],
+ "notes": [
+  "batch2 aec_off/aec_on timing out is expected: SetAecMode closes the audio channel",
+  "snapshot first attempt got HTTP 500 from our own multipart handler (fixed afterwards, retested true)"
+ ]
+}

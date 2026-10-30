@@ -1,0 +1,71 @@
+1681:[mute] OFF by=http at=2026-10-29T22:11:45
+1682:[conn] ('<device-ip>', 61378)
+1683:[a56897] hello sr= 16000 frame= 60
+1690:[a56897] [mcp] result true
+1693:[conn] ('<device-ip>', 61382)
+1694:[e1c919] hello sr= 16000 frame= 60
+1701:[e1c919] [mcp] result true
+1704:[mute] ON by=http since=2026-10-29T22:12:02 mode=A (server drops frames; device keeps uploading)
+1705:[e1c919] [mcp] call self.screen.set_view {'view': 0}
+1706:[debug] mcp self.screen.set_view {"view": 0} -> 1 session(s)
+1707:[e1c919] [mcp] result true
+1708:[mute] OFF by=http at=2026-10-29T22:12:10
+1710:[mute] ON by=http since=2026-10-29T22:12:12 mode=A (server drops frames; device keeps uploading)
+1711:[mute] OFF by=http at=2026-10-29T22:12:13
+1712:[e1c919] [mcp] call self.screen.set_view {'view': 0}
+1713:[debug] mcp self.screen.set_view {"view": 0} -> 1 session(s)
+1714:[e1c919] [mcp] result true
+1715:[mute] ON by=http since=2026-10-29T22:12:14 mode=A (server drops frames; device keeps uploading)
+1716:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1717:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1718:[debug] upload 37283 bytes -> /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221216.jpg
+1719:[e1c919] [mcp] result true
+1720:[e1c919] [mcp] call self.screen.set_view {'view': 1}
+1721:[debug] mcp self.screen.set_view {"view": 1} -> 1 session(s)
+1722:[e1c919] [mcp] result true
+1723:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1724:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1725:[debug] upload 33897 bytes -> /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221219.jpg
+1726:[e1c919] [mcp] result true
+1727:[e1c919] [mcp] call self.screen.set_view {'view': 2}
+1728:[debug] mcp self.screen.set_view {"view": 2} -> 1 session(s)
+1729:[e1c919] [mcp] result true
+1730:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1731:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1732:[debug] upload 42648 bytes -> /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221222.jpg
+1733:[e1c919] [mcp] result true
+1734:[e1c919] [mcp] call self.screen.set_view {'view': 3}
+1735:[debug] mcp self.screen.set_view {"view": 3} -> 1 session(s)
+1736:[e1c919] [mcp] result true
+1737:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1738:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1739:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1740:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1741:[debug] upload 21236 bytes -> /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221246.jpg
+1742:[e1c919] [mcp] error {"code": -32603, "message": "Failed to upload screenshot: Transmit failed (transmit_failed)"}
+1743:[e1c919] [mcp] result true
+1775:[e1c919] [mcp] call self.screen.set_view {'view': 3}
+1776:[debug] mcp self.screen.set_view {"view": 3} -> 1 session(s)
+1777:[e1c919] [mcp] result true
+1778:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1779:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1780:[e1c919] [mcp] error {"code": -32603, "message": "Failed to upload screenshot: Transmit failed (transmit_failed)"}
+1812:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1813:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1814:[e1c919] [mcp] error {"code": -32603, "message": "Failed to upload screenshot: Transmit failed (transmit_failed)"}
+1846:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1847:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1848:[e1c919] [mcp] error {"code": -32603, "message": "Failed to upload screenshot: Transmit failed (transmit_failed)"}
+1880:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1881:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1882:[e1c919] [mcp] error {"code": -32603, "message": "Failed to upload screenshot: Transmit failed (transmit_failed)"}
+1914:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1915:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1916:[e1c919] [mcp] error {"code": -32603, "message": "Failed to open URL: http://<nas-ip>:4411/debug/upload (Connection failed (connect_failed, native=12))"}
+1917:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1918:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1919:[e1c919] [mcp] error {"code": -32603, "message": "Failed to open URL: http://<nas-ip>:4411/debug/upload (Connection failed (connect_failed, native=12))"}
+1920:[e1c919] [mcp] call self.screen.snapshot {'url': 'http://<nas-ip>:4411/debug/upload', 'quality': 90}
+1921:[debug] mcp self.screen.snapshot {"url": "http://<nas-ip>:4411/debug/upload", "quality": 90} -> 1 session(s)
+1922:[debug] upload 24281 bytes -> /Users/bakeyzhang/.hermes/cache/scratch/esp32-voice/photos/snapshot-20261029-221654.jpg
+1923:[e1c919] [mcp] result true

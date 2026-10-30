@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>桌面同事 · 控制台</title>
+<!--
+  Single-file admin console for the 4411 control plane.
+
+  Design notes:
+  - No framework, no build step: one HTML file, inline CSS/JS.
+  - The page itself is anonymous (GET /admin), every byte of data is not:
+    all calls below go to the existing Bearer-protected /debug/* routes.
+  - The control token lives in localStorage only. It is never put in the URL,
+    never written into the DOM, and never logged. On 401 it is dropped.
+  - Same-origin only: every path here is relative, so the page works on
+    localhost, on a LAN address, or behind a tunnel without edits.
+-->
+<style>
+  :root {
+    --paper: #faf8f3;
+    --card: #ffffff;
+    --ink: #1e2328;
+    --muted: #6b7178;
+    --line: #e4e0d6;
+    --line-strong: #d3cec0;
+    --accent: #6f5a3c;
+    --accent-soft: #f0e9dc;
+    --ok: #2f7d4f;
+    --warn: #9a6a17;
+    --bad: #a2382e;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(30, 35, 40, .04), 0 8px 24px rgba(30, 35, 40, .04);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: inherit; font-weight: 600;
+               letter-spacing: 0; margin: 0; }
+  h2 { font-size: 17px; }
+  h3 { font-size: 15px; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+
+  /* ---------- top bar ---------- */
+  .top {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 22px;
+    background: rgba(250, 248, 243, .92);
+    backdrop-filter: saturate(140%) blur(6px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand .zh { font-family: inherit; font-size: 18px; font-weight: 600; }
+  .brand .en { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .tabs { display: flex; gap: 4px; flex: 1 1 auto; overflow-x: auto; }
+  .tab {
+    appearance: none; border: 1px solid transparent; background: transparent;
+    color: var(--muted); font: inherit; font-size: 14px;
+    padding: 7px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); background: rgba(111, 90, 60, .06); }
+  .tab[aria-selected="true"] {
+    color: var(--ink); background: var(--accent-soft); border-color: var(--line-strong);
+  }
+  .top-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .conn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .conn .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+  .conn.on .dot { background: var(--ok); }
+  .conn.off .dot { background: var(--bad); }
+  .ghost, .primary {
+    appearance: none; font: inherit; font-size: 13px; font-weight: 500;
+    line-height: 1; cursor: pointer; white-space: nowrap;
+    min-height: 34px; padding: 0 14px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line-strong);
+  }
+  .ghost { color: var(--ink); background: var(--card); }
+  .ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .ghost.danger { color: var(--bad); border-color: #d9b8b3; }
+  .ghost.danger:hover { border-color: var(--bad); background: #fbf1ef; }
+  .ghost[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .ghost.danger[aria-pressed="true"] { background: #f7e6e3; border-color: var(--bad); color: var(--bad); }
+
+  /* ---------- layout ---------- */
+  main { max-width: 1040px; margin: 0 auto; padding: 26px 22px 64px; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade .16s ease-out; }
+  @keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; } }
+  .lede { color: var(--muted); font-size: 13.5px; margin-bottom: 18px; max-width: 62ch; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  .block { padding: 18px 20px; margin-bottom: 18px; }
+  .block > header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .block > header .hint { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .stat { padding: 15px 16px; }
+  .stat .k { font-size: 12px; color: var(--muted); letter-spacing: .02em; }
+  .stat .v {
+    font-family: inherit; font-weight: 600;
+    font-size: 22px; line-height: 1.25; margin-top: 5px;
+    font-variant-numeric: tabular-nums;
+    word-break: break-word;
+  }
+  .stat .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .stat .v.ok { color: var(--ok); }
+  .stat .v.bad { color: var(--bad); }
+  .stat .v.warn { color: var(--warn); }
+
+  /* ---------- login ---------- */
+  .login { max-width: 520px; margin: 34px auto; padding: 26px; }
+  .login h1 { font-size: 20px; margin-bottom: 6px; }
+  .login .lede { margin-bottom: 18px; }
+  .field { display: flex; gap: 8px; flex-wrap: wrap; }
+  input[type="password"], input[type="text"], textarea {
+    font: inherit; color: var(--ink); background: #fffdf9;
+    border: 1px solid var(--line-strong); border-radius: 8px;
+    padding: 9px 11px; width: 100%; min-width: 0;
+  }
+  input:focus, textarea:focus { outline: 2px solid rgba(111, 90, 60, .28); outline-offset: 1px; }
+  textarea { resize: vertical; min-height: 74px; }
+  .primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+  .primary:hover { filter: brightness(1.08); }
+  .primary:disabled, .ghost:disabled { opacity: .5; cursor: default; }
+  .note { font-size: 12.5px; color: var(--muted); margin-top: 12px; }
+
+  /* ---------- controls ---------- */
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .row:last-child { margin-bottom: 0; }
+  .row .label { min-width: 96px; font-size: 13px; color: var(--muted); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    appearance: none; font: inherit; font-size: 13px; cursor: pointer;
+    padding: 7px 14px; border-radius: 999px;
+    border: 1px solid var(--line-strong); background: #fffdf9; color: var(--ink);
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .chip.danger[aria-pressed="true"] { background: #f7e6e3; border-color: var(--bad); color: var(--bad); }
+  .slider { display: flex; align-items: center; gap: 12px; flex: 1 1 220px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .val { font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; font-size: 13px; }
+
+  .shot {
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start;
+  }
+  .shot figure { margin: 0; flex: 1 1 260px; }
+  .shot img {
+    width: 100%; max-width: 480px; border-radius: 8px;
+    border: 1px solid var(--line-strong); background: #0f1215; display: block;
+  }
+  .shot .empty {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; max-width: 480px; aspect-ratio: 3 / 2;
+    border: 1px dashed var(--line-strong); border-radius: 8px;
+    color: var(--muted); font-size: 13px; background: #fffdf9;
+  }
+
+  /* ---------- diagnostics ---------- */
+  .kv { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 6px 16px; font-size: 13.5px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; word-break: break-word; }
+  .log { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .log li { padding: 7px 0; border-bottom: 1px dashed var(--line); display: flex; gap: 10px; }
+  .log li:last-child { border-bottom: 0; }
+  .log .t { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .log .m.bad { color: var(--bad); }
+  .log .m.ok { color: var(--ok); }
+  details { margin-top: 12px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  pre {
+    margin: 10px 0 0; padding: 12px; overflow: auto; max-height: 340px;
+    background: #fffdf9; border: 1px solid var(--line); border-radius: 8px;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #35393d;
+  }
+
+  /* ---------- toast ---------- */
+  #toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(8px);
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+    pointer-events: none; opacity: 0; transition: opacity .18s, transform .18s; z-index: 50;
+    width: min(92vw, 520px);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .msg {
+    pointer-events: auto; width: 100%;
+    background: #1e2328; color: #f7f4ee; border-radius: 8px;
+    padding: 10px 14px; font-size: 13.5px; box-shadow: 0 6px 24px rgba(0, 0, 0, .18);
+  }
+  .msg.bad { background: #7d2c24; }
+  .msg.ok { background: #2f5c42; }
+
+  /* ---------- 480px ---------- */
+  @media (max-width: 640px) {
+    .top {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center; gap: 10px 12px; padding: 10px 14px;
+    }
+    .brand { grid-column: 1; grid-row: 1; min-width: 0; }
+    .brand .en { display: none; }
+    .top-right { grid-column: 2; grid-row: 1; margin-left: 0; gap: 8px; }
+    .tabs { grid-column: 1 / -1; grid-row: 2; width: auto; flex: none; }
+    main { padding: 18px 14px 56px; }
+    .block { padding: 15px 14px; }
+    .stat .v { font-size: 19px; }
+    .row .label { min-width: 100%; }
+    .kv { grid-template-columns: 1fr; gap: 2px 0; }
+    .kv dt { margin-top: 8px; }
+  }
+  @media (max-width: 480px) {
+    .tabs { gap: 2px; }
+    .tab { padding: 6px 10px; font-size: 13px; }
+    .login { margin: 18px auto; padding: 20px 16px; }
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="zh" data-i18n="brand">桌面同事</span>
+    <span class="en">Console</span>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="sections">
+    <button class="tab" role="tab" id="tab-overview" aria-selected="true" data-view="overview" data-i18n="navOverview">概览</button>
+    <button class="tab" role="tab" id="tab-control" aria-selected="false" data-view="control" data-i18n="navControl">控制</button>
+    <button class="tab" role="tab" id="tab-diag" aria-selected="false" data-view="diag" data-i18n="navDiag">诊断</button>
+  </nav>
+  <div class="top-right">
+    <span class="conn" id="conn"><span class="dot"></span><span id="connText" data-i18n="connUnknown">未连接</span></span>
+    <button class="ghost" id="langBtn" title="Language">EN</button>
+    <button class="ghost" id="logoutBtn" data-i18n="logout" hidden>退出</button>
+  </div>
+</header>
+
+<main>
+  <!-- login -->
+  <section class="card login" id="login">
+    <h1 data-i18n="loginTitle">连接控制台</h1>
+    <p class="lede" data-i18n="loginLede">输入控制 token 后即可读取状态并操作设备。token 只保存在这台浏览器的 localStorage 里，不会出现在 URL 或页面源码中。</p>
+    <form id="loginForm" class="field" autocomplete="off">
+      <input type="password" id="tokenInput" data-i18n-ph="tokenPlaceholder"
+             placeholder="控制 token" autocomplete="current-password" spellcheck="false">
+      <button class="primary" type="submit" id="loginBtn" data-i18n="connect">连接</button>
+    </form>
+    <p class="note" id="loginNote" data-i18n="loginNote">token 在服务端 ~/.esp32-voice/control.token（0600），或由 ESP32_CONTROL_TOKEN 提供。</p>
+  </section>
+
+  <!-- overview -->
+  <section class="panel active" id="panel-overview">
+    <p class="lede" data-i18n="overviewLede">一眼看现状。卡片只显示设备真的报上来的字段；拿不到就写「—」，不猜。</p>
+    <div class="grid" id="stats"></div>
+    <div class="card block" style="margin-top:18px">
+      <header><h2 data-i18n="remindersTitle">未到点提醒</h2><span class="hint" id="remindersHint"></span></header>
+      <div id="reminders"></div>
+    </div>
+  </section>
+
+  <!-- control -->
+  <section class="panel" id="panel-control">
+    <p class="lede" data-i18n="controlLede">全部走现有 /debug/* 接口，没有新的执行通道。每次操作都会在这里留下结果。</p>
+
+    <div class="card block">
+      <header><h2 data-i18n="muteTitle">静音</h2><span class="hint" id="muteHint"></span></header>
+      <div class="row">
+        <span class="label" data-i18n="muteLabel">总开关</span>
+        <div class="chips">
+          <button class="ghost danger" id="muteOn" aria-pressed="false" data-i18n="muteOn">静音</button>
+          <button class="ghost" id="muteOff" aria-pressed="false" data-i18n="muteOff">恢复</button>
+        </div>
+        <button class="ghost" id="muteRefresh" data-i18n="refresh">刷新状态</button>
+      </div>
+      <p class="note" data-i18n="muteNote">口径 A：服务端在解码前丢帧，设备仍会采集并上传。屏幕不会显示「已静音」，那条要等 B2。</p>
+    </div>
+
+    <div class="card block">
+      <header><h2 data-i18n="volumeTitle">音量</h2></header>
+      <div class="row">
+        <span class="label" data-i18n="volumeLabel">设备音量</span>
+        <div class="slider">
+          <input type="range" id="volume" min="0" max="100" step="1" value="50">
+          <span class="val" id="volumeVal">50</span>
+        </div>
+        <button class="primary" id="volumeApply" data-i18n="apply">应用</button>
+      </div>
+    </div>
+
+    <div class="card block">
+      <header><h2 data-i18n="faceTitle">表情</h2><span class="hint" data-i18n="faceHint">推一次表情，不走对话回合</span></header>
+      <div class="chips" id="emotions"></div>
+    </div>
+
+    <div class="card block">
+      <header><h2 data-i18n="viewTitle">屏幕视图</h2><span class="hint" data-i18n="viewHint">A/B/C/D = set_view 0..3</span></header>
+      <div class="chips" id="views"></div>
+    </div>
+
+    <div class="card block">
+      <header><h2 data-i18n="shotTitle">截屏</h2><span class="hint" data-i18n="shotHint">设备端截当前屏幕，回传到服务端</span></header>
+      <div class="row">
+        <button class="primary" id="shotBtn" data-i18n="shotTake">截一张</button>
+        <button class="ghost" id="shotReload" data-i18n="shotReload">看最新</button>
+      </div>
+      <div class="shot" style="margin-top:12px">
+        <figure>
+          <img id="shotImg" alt="device screen" hidden>
+          <div class="empty" id="shotEmpty" data-i18n="shotEmpty">还没有截图</div>
+        </figure>
+      </div>
+    </div>
+
+    <div class="card block">
+      <header><h2 data-i18n="turnTitle">文本试说</h2><span class="hint" data-i18n="turnHint">用文本造一轮真实回答</span></header>
+      <textarea id="turnText" data-i18n-ph="turnPlaceholder" placeholder="例如：报一下现在的设备状态"></textarea>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="turnBtn" data-i18n="turnSend">说一句</button>
+        <span class="note" id="turnNote" style="margin:0"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- diagnostics -->
+  <section class="panel" id="panel-diag">
+    <p class="lede" data-i18n="diagLede">状态原文 + 本次会话的操作记录。需要贴给维护者时，展开 JSON 复制即可。</p>
+    <div class="card block">
+      <header><h2 data-i18n="diagStateTitle">服务与设备</h2><button class="ghost" id="diagRefresh" data-i18n="refresh" style="margin-left:auto">刷新</button></header>
+      <dl class="kv" id="diagKv"></dl>
+      <details>
+        <summary data-i18n="rawJson">原始 JSON</summary>
+        <pre id="rawJson">{}</pre>
+      </details>
+    </div>
+    <div class="card block">
+      <header><h2 data-i18n="diagLogTitle">操作记录</h2><span class="hint" data-i18n="diagLogHint">只在这台浏览器里，刷新即清</span></header>
+      <ul class="log" id="actionLog"></ul>
+    </div>
+  </section>
+</main>
+
+<div id="toast" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- i18n ----------
+  var I18N = {
+    zh: {
+      brand: "桌面同事",
+      navOverview: "概览", navControl: "控制", navDiag: "诊断",
+      connUnknown: "未连接", connOn: "已连接", connOff: "连接失败",
+      logout: "退出",
+      loginTitle: "连接控制台",
+      loginLede: "输入控制 token 后即可读取状态并操作设备。token 只保存在这台浏览器的 localStorage 里，不会出现在 URL 或页面源码中。",
+      tokenPlaceholder: "控制 token",
+      connect: "连接", connecting: "验证中…",
+      loginNote: "token 在服务端的控制 token 文件里（0600），或由环境变量提供。",
+      tokenBad: "token 无效，请重新输入。",
+      tokenOk: "已连接。",
+      overviewLede: "一眼看现状。卡片只显示设备真的报上来的字段；拿不到就写「—」，不猜。",
+      remindersTitle: "未到点提醒", remindersEmpty: "没有待触发的提醒。", remindersCount: "共 {n} 条",
+      controlLede: "全部走现有 /debug/* 接口，没有新的执行通道。每次操作都会在这里留下结果。",
+      muteTitle: "静音", muteLabel: "总开关", muteOn: "静音", muteOff: "恢复",
+      muteNote: "口径 A：服务端在解码前丢帧，设备仍会采集并上传。屏幕不会显示「已静音」，那条要等 B2。",
+      volumeTitle: "音量", volumeLabel: "设备音量", apply: "应用",
+      faceTitle: "表情", faceHint: "推一次表情，不走对话回合",
+      viewTitle: "屏幕视图", viewHint: "A/B/C/D = set_view 0..3",
+      shotTitle: "截屏", shotHint: "设备端截当前屏幕，回传到服务端",
+      shotTake: "截一张", shotReload: "看最新", shotEmpty: "还没有截图",
+      shotSaved: "截图已保存。", shotNoSession: "设备没有会话，截不到。",
+      turnTitle: "文本试说", turnHint: "用文本造一轮真实回答",
+      turnPlaceholder: "例如：报一下现在的设备状态",
+      turnSend: "说一句", turnSent: "已开始这一轮。",
+      diagLede: "状态原文 + 本次会话的操作记录。需要贴给维护者时，展开 JSON 复制即可。",
+      diagStateTitle: "服务与设备", refresh: "刷新",
+      rawJson: "原始 JSON", diagLogTitle: "操作记录", diagLogHint: "只在这台浏览器里，刷新即清",
+      logEmpty: "还没有操作。",
+      // cards
+      cOnline: "设备连接", cMute: "静音", cVolume: "音量", cSignal: "信号",
+      cBattery: "电量", cScreen: "屏幕", cVersion: "固件版本", cSram: "可用内存",
+      cProactive: "主动播报（今日）", cReminders: "提醒",
+      vOnline: "在线", vOffline: "无会话", vMuted: "静音中", vUnmuted: "正常",
+      vSending: "播报 {n}", vNoData: "—",
+      // errors
+      err401: "token 无效或已失效，请重新连接。",
+      err403: "这个操作被服务端拒绝。",
+      err400: "请求格式不对。",
+      err409: "设备正忙（上一轮还没结束），等它说完再试。",
+      err503: "设备没有会话（或该功能未配置），先唤醒它。",
+      err500: "服务端出错了，看诊断区的原始 JSON。",
+      errNet: "连不上服务端，检查它是否还在跑。",
+      errOther: "操作失败（HTTP {code}）。"
+    },
+    en: {
+      brand: "Desk Console",
+      navOverview: "Overview", navControl: "Control", navDiag: "Diagnostics",
+      connUnknown: "not connected", connOn: "connected", connOff: "connection failed",
+      logout: "Sign out",
+      loginTitle: "Connect",
+      loginLede: "Paste the control token to read state and drive the device. It stays in this browser's localStorage and never appears in the URL or the page source.",
+      tokenPlaceholder: "control token",
+      connect: "Connect", connecting: "checking…",
+      loginNote: "The token lives in the server's control-token file (0600) or comes from an env var.",
+      tokenBad: "Token rejected — try again.",
+      tokenOk: "Connected.",
+      overviewLede: "The current state at a glance. Cards only show fields the device actually reports; missing values read — instead of a guess.",
+      remindersTitle: "Pending reminders", remindersEmpty: "No reminder is waiting.", remindersCount: "{n} total",
+      controlLede: "Everything goes through the existing /debug/* routes; no new execution path. Each action leaves its result below.",
+      muteTitle: "Mute", muteLabel: "Master switch", muteOn: "Mute", muteOff: "Unmute",
+      muteNote: "Mode A: the server drops frames before decoding, the device still captures and uploads. The screen does not show a muted badge yet (that is B2).",
+      volumeTitle: "Volume", volumeLabel: "Device volume", apply: "Apply",
+      faceTitle: "Expression", faceHint: "one push, no conversation turn",
+      viewTitle: "Screen view", viewHint: "A/B/C/D = set_view 0..3",
+      shotTitle: "Screenshot", shotHint: "the device captures its screen and uploads it",
+      shotTake: "Capture", shotReload: "Load latest", shotEmpty: "No screenshot yet",
+      shotSaved: "Screenshot saved.", shotNoSession: "No live session — nothing to capture.",
+      turnTitle: "Text turn", turnHint: "drive one real answer from text",
+      turnPlaceholder: "e.g. report the current device status",
+      turnSend: "Say it", turnSent: "Turn started.",
+      diagLede: "Raw state plus this session's actions. Expand the JSON when you need to paste it to a maintainer.",
+      diagStateTitle: "Service & device", refresh: "Refresh",
+      rawJson: "Raw JSON", diagLogTitle: "Actions", diagLogHint: "this browser only, cleared on reload",
+      logEmpty: "Nothing yet.",
+      cOnline: "Device", cMute: "Mute", cVolume: "Volume", cSignal: "Signal",
+      cBattery: "Battery", cScreen: "Screen", cVersion: "Firmware", cSram: "Free heap",
+      cProactive: "Proactive (today)", cReminders: "Reminders",
+      vOnline: "online", vOffline: "no session", vMuted: "muted", vUnmuted: "normal",
+      vSending: "{n} today", vNoData: "—",
+      err401: "Token rejected or expired — connect again.",
+      err403: "The server refused this action.",
+      err400: "Malformed request.",
+      err409: "Device is busy (a turn is in flight) — let it finish first.",
+      err503: "No device session (or the feature is not configured). Wake the board first.",
+      err500: "Server error — check the raw JSON in Diagnostics.",
+      errNet: "Cannot reach the server. Is it still running?",
+      errOther: "Action failed (HTTP {code})."
+    }
+  };
+
+  var LANGS = ["zh", "en"];
+  var TOKEN_KEY = "esp32-admin-token";
+  var LANG_KEY = "esp32-admin-lang";
+  var VIEW_KEY = "esp32-admin-view";
+
+  var EMOTIONS = ["neutral", "happy", "thinking", "confused", "shocked", "winking"];
+  var VIEWS = [
+    { id: "A", value: 0 },
+    { id: "B", value: 1 },
+    { id: "C", value: 2 },
+    { id: "D", value: 3 }
+  ];
+
+  var state = {
+    token: "",
+    lang: "zh",
+    view: "overview",
+    muted: null,
+    volume: null,
+    apiOk: null,          // did the server answer at all? (auth + reachability)
+
+    busy: false,
+    shotUrl: "",
+    lastSnapshot: null,
+    log: []
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  function t(key, vars) {
+    var table = I18N[state.lang] || I18N.zh;
+    var s = (table[key] !== undefined) ? table[key] : (I18N.zh[key] || key);
+    if (vars) {
+      Object.keys(vars).forEach(function (k) {
+        s = s.replace("{" + k + "}", vars[k]);
+      });
+    }
+    return s;
+  }
+
+  // ---------- storage (token never leaves localStorage) ----------
+  function loadToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
+  }
+  function saveToken(value) {
+    try {
+      if (value) { localStorage.setItem(TOKEN_KEY, value); }
+      else { localStorage.removeItem(TOKEN_KEY); }
+    } catch (e) { /* private mode: keep it in memory only */ }
+  }
+  function loadLang() {
+    try {
+      var v = localStorage.getItem(LANG_KEY);
+      return LANGS.indexOf(v) >= 0 ? v : "zh";
+    } catch (e) { return "zh"; }
+  }
+
+  // ---------- i18n render ----------
+  function applyLang() {
+    document.documentElement.lang = state.lang === "zh" ? "zh-Hans" : "en";
+    var nodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      el.textContent = t(el.getAttribute("data-i18n"));
+    }
+    var phs = document.querySelectorAll("[data-i18n-ph]");
+    for (var j = 0; j < phs.length; j++) {
+      phs[j].setAttribute("placeholder", t(phs[j].getAttribute("data-i18n-ph")));
+    }
+    $("langBtn").textContent = state.lang === "zh" ? "EN" : "中文";
+    renderConn();
+    renderStats(currentPayload);
+    // Values written by JS (not data-i18n) need a re-render as well, otherwise
+    // "静音中" survives a switch to English until the next refresh.
+    syncMuteUI();
+    renderLog();
+  }
+
+  function setLang(next) {
+    state.lang = next;
+    try { localStorage.setItem(LANG_KEY, next); } catch (e) { /* ignore */ }
+    applyLang();
+  }
+
+  // ---------- toast ----------
+  var toastTimer = null;
+  function toast(text, kind) {
+    var box = $("toast");
+    box.innerHTML = "";
+    var node = document.createElement("div");
+    node.className = "msg" + (kind ? " " + kind : "");
+    node.textContent = text;               // textContent only: no HTML injection
+    box.appendChild(node);
+    box.classList.add("show");
+    if (toastTimer) { clearTimeout(toastTimer); }
+    toastTimer = setTimeout(function () { box.classList.remove("show"); }, 4200);
+  }
+
+  function logAction(text, kind) {
+    var now = new Date();
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    state.log.unshift({
+      at: pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds()),
+      text: text,
+      kind: kind || ""
+    });
+    if (state.log.length > 30) { state.log.length = 30; }
+    renderLog();
+  }
+
+  function renderLog() {
+    var list = $("actionLog");
+    list.innerHTML = "";
+    if (!state.log.length) {
+      var empty = document.createElement("li");
+      empty.className = "t";
+      empty.textContent = t("logEmpty");
+      list.appendChild(empty);
+      return;
+    }
+    state.log.forEach(function (entry) {
+      var li = document.createElement("li");
+      var time = document.createElement("span");
+      time.className = "t";
+      time.textContent = entry.at;
+      var msg = document.createElement("span");
+      msg.className = "m" + (entry.kind ? " " + entry.kind : "");
+      msg.textContent = entry.text;
+      li.appendChild(time);
+      li.appendChild(msg);
+      list.appendChild(li);
+    });
+  }
+
+  // ---------- api ----------
+  function explain(status, data) {
+    if (status === 401) { return t("err401"); }
+    if (status === 403) { return t("err403"); }
+    if (status === 400) { return t("err400") + detail(data); }
+    if (status === 409) { return t("err409"); }
+    if (status === 503) { return t("err503") + detail(data); }
+    if (status >= 500) { return t("err500") + detail(data); }
+    return t("errOther", { code: status });
+  }
+
+  function detail(data) {
+    if (data && typeof data.error === "string" && data.error) {
+      return " (" + data.error + ")";
+    }
+    return "";
+  }
+
+  function api(path, opts) {
+    opts = opts || {};
+    var headers = {};
+    if (state.token) { headers["Authorization"] = "Bearer " + state.token; }
+    if (opts.body !== undefined) { headers["Content-Type"] = "application/json"; }
+    return fetch(path, {
+      method: opts.method || "GET",
+      headers: headers,
+      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      cache: "no-store",
+      credentials: "same-origin"
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data = null;
+        if (text) {
+          try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
+        }
+        return { status: res.status, ok: res.ok, data: data };
+      });
+    }).catch(function () {
+      return { status: 0, ok: false, data: null, net: true };
+    });
+  }
+
+  function fail(res, label) {
+    if (res.net) {
+      setConn("off");
+      toast(t("errNet"), "bad");
+      logAction(label + " → " + t("errNet"), "bad");
+      return;
+    }
+    if (res.status === 401) { signOut(t("tokenBad")); }
+    var text = explain(res.status, res.data);
+    toast(text, "bad");
+    logAction(label + " → " + text, "bad");
+    if (state.view === "diag") { renderRaw({ error: res.status + " " + text, body: res.data }); }
+  }
+
+  // ---------- connection state ----------
+  function setConn(mode) {
+    var box = $("conn");
+    box.className = "conn" + (mode === "on" ? " on" : mode === "off" ? " off" : "");
+    $("connText").textContent = mode === "on" ? t("connOn")
+      : mode === "off" ? t("connOff") : t("connUnknown");
+  }
+
+  function renderConn() {
+    // The dot is about the console<->server link, not about whether the board
+    // currently holds a session: "no session" is a normal state, not an error.
+    if (!state.token) { setConn(""); return; }
+    if (state.apiOk === true) { setConn("on"); return; }
+    if (state.apiOk === false) { setConn("off"); return; }
+    setConn("");
+  }
+
+  // ---------- login ----------
+  function showLogin(show) {
+    $("login").style.display = show ? "" : "none";
+    $("logoutBtn").hidden = show;
+    ["panel-overview", "panel-control", "panel-diag"].forEach(function (id) {
+      $(id).style.display = "none";
+    });
+    if (!show) { selectView(state.view || "overview"); }
+  }
+
+  function signOut(message) {
+    state.token = "";
+    saveToken("");
+    state.muted = null;
+    state.apiOk = null;
+    currentPayload = null;
+    setConn("");
+    showLogin(true);
+    if (message) { toast(message, "bad"); }
+  }
+
+  function verifyToken(token) {
+    $("loginBtn").disabled = true;
+    $("loginBtn").textContent = t("connecting");
+    return fetch("/debug/mute", {
+      headers: { "Authorization": "Bearer " + token },
+      cache: "no-store",
+      credentials: "same-origin"
+    }).then(function (res) {
+      if (res.status === 200) { return true; }
+      if (res.status === 401) { return false; }
+      // 503 means mute is not configured but the token was accepted: that is
+      // still a valid login (the device just has no mute feature).
+      return res.status === 503;
+    }).catch(function () { return null; }).then(function (ok) {
+      $("loginBtn").disabled = false;
+      $("loginBtn").textContent = t("connect");
+      return ok;
+    });
+  }
+
+  $("loginForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var value = $("tokenInput").value.trim();
+    if (!value) { $("tokenInput").focus(); return; }
+    verifyToken(value).then(function (ok) {
+      if (ok === null) { toast(t("errNet"), "bad"); return; }
+      if (!ok) {
+        $("tokenInput").value = "";
+        toast(t("tokenBad"), "bad");
+        return;
+      }
+      state.token = value;
+      saveToken(value);
+      $("tokenInput").value = "";
+      showLogin(false);
+      toast(t("tokenOk"), "ok");
+      logAction(t("tokenOk"), "ok");
+      refreshAll();
+    });
+  });
+
+  $("logoutBtn").addEventListener("click", function () { signOut(""); });
+
+  $("langBtn").addEventListener("click", function () {
+    setLang(state.lang === "zh" ? "en" : "zh");
+  });
+
+  // ---------- views ----------
+  function selectView(name) {
+    if (["overview", "control", "diag"].indexOf(name) < 0) { name = "overview"; }
+    state.view = name;
+    try { localStorage.setItem(VIEW_KEY, name); } catch (e) { /* ignore */ }
+    ["overview", "control", "diag"].forEach(function (item) {
+      var tab = $("tab-" + item);
+      var panel = $("panel-" + item);
+      var on = item === name;
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+      panel.classList.toggle("active", on);
+      // showLogin() hides every panel with an inline style, and an inline
+      // display beats the .panel.active rule - so the class alone is not
+      // enough to bring a panel back after signing in.
+      panel.style.display = on ? "" : "none";
+    });
+    if (name === "diag") { refreshAll(); }
+  }
+
+  ["overview", "control", "diag"].forEach(function (name) {
+    $("tab-" + name).addEventListener("click", function () { selectView(name); });
+  });
+
+  // ---------- device status helpers ----------
+  function parseResult(payload) {
+    // /debug/tool returns results[].result as the text the LLM would see; it is
+    // usually JSON, but a plain sentence is legal too.
+    if (!payload || !payload.results || !payload.results.length) { return null; }
+    var raw = payload.results[0].result;
+    if (raw && typeof raw === "object") { return raw; }
+    if (typeof raw !== "string") { return null; }
+    try { return JSON.parse(raw); } catch (e) { return { text: raw }; }
+  }
+
+  function pick(obj, path) {
+    var cur = obj;
+    var parts = path.split(".");
+    for (var i = 0; i < parts.length; i++) {
+      if (!cur || typeof cur !== "object" || cur[parts[i]] === undefined) { return undefined; }
+      cur = cur[parts[i]];
+    }
+    return cur;
+  }
+
+  function formatBytes(value) {
+    if (value === undefined || value === null || value === "") { return null; }
+    var n = Number(value);
+    if (!isFinite(n)) { return String(value); }
+    if (n >= 1024 * 1024) { return (n / (1024 * 1024)).toFixed(2) + " MB"; }
+    if (n >= 1024) { return Math.round(n / 1024) + " KB"; }
+    return n + " B";
+  }
+
+  function card(key, value, sub, cls) {
+    var wrap = document.createElement("div");
+    wrap.className = "card stat";
+    var k = document.createElement("div");
+    k.className = "k";
+    k.textContent = t(key);
+    var v = document.createElement("div");
+    v.className = "v" + (cls ? " " + cls : "");
+    v.textContent = (value === undefined || value === null || value === "") ? t("vNoData") : String(value);
+    wrap.appendChild(k);
+    wrap.appendChild(v);
+    if (sub) {
+      var s = document.createElement("div");
+      s.className = "sub";
+      s.textContent = sub;
+      wrap.appendChild(s);
+    }
+    return wrap;
+  }
+
+  var currentPayload = null;
+
+  function renderStats(payload) {
+    var grid = $("stats");
+    grid.innerHTML = "";
+    var p = payload || {};
+    var device = p.device || {};
+    var mute = p.mute || {};
+    var proactive = p.proactive || {};
+
+    var online = !!p.online;
+    grid.appendChild(card("cOnline", online ? t("vOnline") : t("vOffline"),
+                          p.sessionCount ? p.sessionCount + " session(s)" : "", online ? "ok" : "warn"));
+
+    var muted = (typeof mute.muted === "boolean") ? mute.muted : null;
+    grid.appendChild(card("cMute", muted === null ? null : (muted ? t("vMuted") : t("vUnmuted")),
+                          mute.mode ? mute.mode : "", muted ? "warn" : ""));
+
+    var volume = pick(device, "audio_speaker.volume");
+    if (volume === undefined) { volume = pick(device, "volume"); }
+    grid.appendChild(card("cVolume", volume, volume === undefined ? "" : "/ 100"));
+
+    var signal = pick(device, "network.signal");
+    var netType = pick(device, "network.type");
+    grid.appendChild(card("cSignal", signal, netType || ""));
+
+    var battery = pick(device, "battery.level");
+    var charging = pick(device, "battery.charging");
+    grid.appendChild(card("cBattery", battery,
+                          charging === undefined ? "" : (charging ? "charging" : "on battery")));
+
+    var brightness = pick(device, "screen.brightness");
+    var theme = pick(device, "screen.theme");
+    grid.appendChild(card("cScreen",
+                          brightness === undefined ? null : brightness + "%",
+                          theme || ""));
+
+    // `get_device_status` only carries audio/screen/battery/network, so the
+    // version and the heap come from the other read-only user tool,
+    // self.get_system_info (firmware main/mcp_server.cc:126). Field names are
+    // the firmware's: application.version / minimum_free_heap_size.
+    var sys = p.sys || {};
+    var appVersion = pick(sys, "application.version");
+    if (appVersion === undefined) { appVersion = pick(sys, "version"); }
+    var chip = pick(sys, "chip_model_name");
+    var appName = pick(sys, "application.name");
+    grid.appendChild(card("cVersion", appVersion,
+                          [chip, appName].filter(Boolean).join(" · ")));
+
+    var heap = pick(sys, "minimum_free_heap_size");
+    grid.appendChild(card("cSram", formatBytes(heap), heap === undefined ? "" : "min free"));
+
+    var today = proactive.today || {};
+    grid.appendChild(card("cProactive",
+                          proactive.enabled === undefined ? null : t("vSending", { n: today.spoke || 0 }),
+                          proactive.dry_run ? "dry_run" : (proactive.enabled ? "live" : "disabled")));
+
+    var reminders = (p.reminders && p.reminders.count !== undefined)
+      ? p.reminders.count
+      : (proactive.reminders && proactive.reminders.count);
+    grid.appendChild(card("cReminders", reminders, ""));
+
+    renderReminders(p);
+  }
+
+  function renderReminders(p) {
+    var host = $("reminders");
+    host.innerHTML = "";
+    var list = (p.reminders && p.reminders.reminders) || [];
+    $("remindersHint").textContent = list.length ? t("remindersCount", { n: list.length }) : "";
+    if (!list.length) {
+      var empty = document.createElement("p");
+      empty.className = "note";
+      empty.style.marginTop = "0";
+      empty.textContent = t("remindersEmpty");
+      host.appendChild(empty);
+      return;
+    }
+    var dl = document.createElement("dl");
+    dl.className = "kv";
+    list.forEach(function (item) {
+      var dt = document.createElement("dt");
+      dt.textContent = item.at || "";
+      var dd = document.createElement("dd");
+      dd.textContent = item.text || "";
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    });
+    host.appendChild(dl);
+  }
+
+  function renderRaw(obj) {
+    $("rawJson").textContent = JSON.stringify(obj, null, 2);
+  }
+
+  function renderDiag(payload) {
+    var kv = $("diagKv");
+    kv.innerHTML = "";
+    var p = payload || {};
+    var rows = [
+      ["cOnline", p.online ? t("vOnline") : t("vOffline")],
+      ["cMute", (p.mute && typeof p.mute.muted === "boolean")
+        ? (p.mute.muted ? t("vMuted") : t("vUnmuted")) + (p.mute.since ? " · " + p.mute.since : "")
+        : null],
+      ["cProactive", (p.proactive && p.proactive.enabled !== undefined)
+        ? (p.proactive.enabled ? "enabled" : "disabled")
+          + (p.proactive.dry_run ? " · dry_run" : "")
+          + (p.proactive.hourly ? " · " + p.proactive.hourly.used + "/" + p.proactive.hourly.limit : "")
+        : null],
+      ["cReminders", (p.reminders && p.reminders.count !== undefined) ? String(p.reminders.count) : null],
+      ["cVersion", (function () {
+        var sys = p.sys || {};
+        var v = pick(sys, "application.version");
+        if (v === undefined) { v = pick(sys, "version"); }
+        return (v === undefined) ? null
+          : v + (pick(sys, "application.idf_version") ? " · idf " + pick(sys, "application.idf_version") : "");
+      })()],
+      ["cSram", (function () {
+        var heap = pick(p.sys || {}, "minimum_free_heap_size");
+        return (heap === undefined) ? null : formatBytes(heap) + " free";
+      })()]
+    ];
+    rows.forEach(function (row) {
+      var dt = document.createElement("dt");
+      dt.textContent = t(row[0]);
+      var dd = document.createElement("dd");
+      dd.textContent = (row[1] === null || row[1] === undefined) ? t("vNoData") : row[1];
+      kv.appendChild(dt);
+      kv.appendChild(dd);
+    });
+    // The mute payload carries `persisted_path`; it is a server filesystem
+    // path, so the raw view gets a copy with that field removed.
+    var safe = JSON.parse(JSON.stringify(p));
+    if (safe.mute && safe.mute.persisted_path) { delete safe.mute.persisted_path; }
+    renderRaw(safe);
+  }
+
+  // ---------- data load ----------
+  function refreshAll() {
+    if (!state.token) { return Promise.resolve(); }
+    setConn("");
+    return Promise.all([
+      api("/debug/mute"),
+      api("/debug/proactive/status"),
+      api("/debug/reminder"),
+      api("/debug/tool", { method: "POST", body: { name: "get_device_status", arguments: {} } }),
+      api("/debug/tool", { method: "POST", body: { name: "self.get_system_info", arguments: {} } })
+    ]).then(function (out) {
+      var muteRes = out[0];
+      var proRes = out[1];
+      var remRes = out[2];
+      var devRes = out[3];
+      var sysRes = out[4];
+
+      if (muteRes.status === 401) {
+        state.apiOk = true;      // the server answered; the token is the problem
+        fail(muteRes, "GET /debug/mute");
+        return;
+      }
+      state.apiOk = !muteRes.net;
+
+      var payload = { sessionCount: 0 };
+      if (muteRes.ok && muteRes.data) {
+        payload.mute = muteRes.data;
+        state.muted = !!muteRes.data.muted;
+      }
+      if (proRes.ok && proRes.data) {
+        payload.proactive = proRes.data;
+        payload.online = !!proRes.data.socket_alive || !!(proRes.data.socket && proRes.data.socket.alive);
+      } else if (proRes.status === 503) {
+        payload.proactive = {};
+      }
+      if (remRes.ok && remRes.data) { payload.reminders = remRes.data; }
+      if (devRes.ok) {
+        payload.device = parseResult(devRes.data) || {};
+      } else if (devRes.status === 503) {
+        payload.online = false;
+      }
+      // Same shape as device: results[0].result holds the JSON text. A missing
+      // session answers 503, which simply leaves the two cards at —.
+      if (sysRes.ok) {
+        payload.sys = parseResult(sysRes.data) || {};
+      }
+
+      currentPayload = payload;
+      state.volume = pick(payload.device || {}, "audio_speaker.volume");
+      if (state.volume === undefined) { state.volume = pick(payload.device || {}, "volume"); }
+
+      renderStats(payload);
+      renderDiag(payload);
+      renderConn();
+      syncVolumeUI();
+      syncMuteUI();
+      return payload;
+    });
+  }
+
+  // ---------- mute ----------
+  function syncMuteUI() {
+    var muted = state.muted;
+    $("muteOn").setAttribute("aria-pressed", muted ? "true" : "false");
+    $("muteOff").setAttribute("aria-pressed", muted === false ? "true" : "false");
+    if (muted === null || muted === undefined) {
+      $("muteHint").textContent = t("vNoData");
+    } else {
+      $("muteHint").textContent = muted ? t("vMuted") : t("vUnmuted");
+    }
+  }
+
+  function setMuted(value) {
+    if (state.busy) { return; }
+    state.busy = true;
+    $("muteOn").disabled = true;
+    $("muteOff").disabled = true;
+    api("/debug/mute", { method: "POST", body: { muted: value } }).then(function (res) {
+      state.busy = false;
+      $("muteOn").disabled = false;
+      $("muteOff").disabled = false;
+      if (!res.ok) { fail(res, "POST /debug/mute"); syncMuteUI(); return; }
+      state.muted = !!res.data.muted;
+      syncMuteUI();
+      var label = state.muted ? t("vMuted") : t("vUnmuted");
+      toast(label, "ok");
+      logAction("mute → " + label, "ok");
+      refreshAll();
+    });
+  }
+
+  $("muteOn").addEventListener("click", function () { setMuted(true); });
+  $("muteOff").addEventListener("click", function () { setMuted(false); });
+  $("muteRefresh").addEventListener("click", function () {
+    api("/debug/mute").then(function (res) {
+      if (!res.ok) { fail(res, "GET /debug/mute"); return; }
+      state.muted = !!res.data.muted;
+      syncMuteUI();
+      logAction("GET /debug/mute → " + (state.muted ? t("vMuted") : t("vUnmuted")), "ok");
+    });
+  });
+
+  // ---------- volume ----------
+  function syncVolumeUI() {
+    if (state.volume === null || state.volume === undefined) { return; }
+    var value = Math.max(0, Math.min(100, Math.round(Number(state.volume))));
+    $("volume").value = String(value);
+    $("volumeVal").textContent = String(value);
+  }
+
+  $("volume").addEventListener("input", function () {
+    $("volumeVal").textContent = $("volume").value;
+  });
+
+  $("volumeApply").addEventListener("click", function () {
+    var value = Math.round(Number($("volume").value));
+    api("/debug/tool", {
+      method: "POST",
+      body: { name: "self.audio_speaker.set_volume", arguments: { volume: value } }
+    }).then(function (res) {
+      if (!res.ok) { fail(res, "set_volume"); return; }
+      state.volume = value;
+      toast(t("cVolume") + " → " + value, "ok");
+      logAction("set_volume " + value, "ok");
+      renderConn();
+    });
+  });
+
+  // ---------- emotions ----------
+  (function buildEmotions() {
+    var host = $("emotions");
+    EMOTIONS.forEach(function (name) {
+      var btn = document.createElement("button");
+      btn.className = "chip";
+      btn.type = "button";
+      btn.textContent = name;
+      btn.addEventListener("click", function () {
+        api("/debug/emotion", { method: "POST", body: { emotion: name } }).then(function (res) {
+          if (!res.ok) { fail(res, "emotion " + name); return; }
+          toast("emotion → " + name, "ok");
+          logAction("emotion " + name, "ok");
+        });
+      });
+      host.appendChild(btn);
+    });
+  })();
+
+  // ---------- views A/B/C/D ----------
+  (function buildViews() {
+    var host = $("views");
+    VIEWS.forEach(function (item) {
+      var btn = document.createElement("button");
+      btn.className = "chip";
+      btn.type = "button";
+      btn.textContent = item.id;
+      btn.addEventListener("click", function () {
+        api("/debug/tool", {
+          method: "POST",
+          body: { name: "self.screen.set_view", arguments: { view: item.value } }
+        }).then(function (res) {
+          if (!res.ok) { fail(res, "set_view " + item.id); return; }
+          var chips = host.querySelectorAll(".chip");
+          for (var i = 0; i < chips.length; i++) { chips[i].setAttribute("aria-pressed", "false"); }
+          btn.setAttribute("aria-pressed", "true");
+          toast("view " + item.id, "ok");
+          logAction("set_view " + item.id, "ok");
+        });
+      });
+      host.appendChild(btn);
+    });
+  })();
+
+  // ---------- screenshot ----------
+  function showShot(blobUrl) {
+    if (state.shotUrl) { URL.revokeObjectURL(state.shotUrl); }
+    state.shotUrl = blobUrl;
+    $("shotImg").src = blobUrl;
+    $("shotImg").hidden = false;
+    $("shotEmpty").hidden = true;
+  }
+
+  function loadLatestShot() {
+    if (!state.token) { return; }
+    // The photo route is Bearer-protected, and an <img> cannot send a header,
+    // so the bytes come in as a blob and are shown from an object URL.
+    fetch("/debug/photo/latest", {
+      headers: { "Authorization": "Bearer " + state.token },
+      cache: "no-store",
+      credentials: "same-origin"
+    }).then(function (res) {
+      if (res.status === 401) { signOut(t("tokenBad")); return null; }
+      // 404 = nothing captured yet: the placeholder is the right answer, and a
+      // toast would only nag on every load.
+      if (res.status === 404) { return null; }
+      if (!res.ok) {
+        var text = explain(res.status, null);
+        toast(text, "bad");
+        logAction("GET /debug/photo/latest → " + text, "bad");
+        return null;
+      }
+      return res.blob();
+    }).then(function (blob) {
+      if (blob) { showShot(URL.createObjectURL(blob)); }
+    }).catch(function () {
+      toast(t("errNet"), "bad");
+      logAction("GET /debug/photo/latest → " + t("errNet"), "bad");
+    });
+  }
+
+  $("shotBtn").addEventListener("click", function () {
+    var origin = window.location.origin;
+    api("/debug/tool", {
+      method: "POST",
+      body: {
+        name: "self.screen.snapshot",
+        arguments: { url: origin + "/debug/upload" }
+      }
+    }).then(function (res) {
+      if (!res.ok) {
+        fail(res, "snapshot");
+        if (res.status === 503) { toast(t("shotNoSession"), "bad"); }
+        return;
+      }
+      toast(t("shotSaved"), "ok");
+      logAction("snapshot", "ok");
+      // The upload lands asynchronously; one short retry is enough.
+      setTimeout(loadLatestShot, 600);
+      setTimeout(loadLatestShot, 1600);
+    });
+  });
+
+  $("shotReload").addEventListener("click", loadLatestShot);
+
+  // ---------- text turn ----------
+  $("turnBtn").addEventListener("click", function () {
+    var text = $("turnText").value.trim();
+    if (!text) { $("turnText").focus(); return; }
+    $("turnBtn").disabled = true;
+    api("/debug/turn", { method: "POST", body: { text: text } }).then(function (res) {
+      $("turnBtn").disabled = false;
+      if (!res.ok) {
+        $("turnNote").textContent = explain(res.status, res.data);
+        fail(res, "turn");
+        return;
+      }
+      $("turnNote").textContent = t("turnSent");
+      toast(t("turnSent"), "ok");
+      logAction("turn " + text, "ok");
+    });
+  });
+
+  // ---------- refresh buttons ----------
+  $("diagRefresh").addEventListener("click", function () { refreshAll(); });
+
+  // ---------- boot ----------
+  state.lang = loadLang();
+  try {
+    var savedView = localStorage.getItem(VIEW_KEY);
+    if (savedView) { state.view = savedView; }
+  } catch (e) { /* ignore */ }
+  applyLang();
+  renderLog();
+  renderStats(null);
+  renderDiag(null);
+
+  state.token = loadToken();
+  if (state.token) {
+    // A stored token still has to prove itself: on failure the page falls back
+    // to the login card instead of showing stale data.
+    verifyToken(state.token).then(function (ok) {
+      if (ok === true) {
+        showLogin(false);
+        refreshAll();
+      } else {
+        signOut(ok === null ? t("errNet") : t("tokenBad"));
+      }
+    });
+  } else {
+    showLogin(true);
+  }
+})();
+</script>
+</body>
+</html>

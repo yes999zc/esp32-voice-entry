@@ -1,0 +1,5 @@
+# Dev-only dependencies. Install into the same interpreter that runs the server:
+#   UV_CACHE_DIR=$PWD/.uvcache uv pip install --python .venv313/bin/python -r requirements-dev.txt
+-r requirements.txt
+pytest>=9.0
+pytest-asyncio>=1.0

@@ -1,0 +1,14 @@
+=== 2026-10-29 22:11:58 CST BEFORE ===
+CMD curl -s -H 'Authorization: Bearer <token>' http://127.0.0.1:4411/debug/mute
+{"ok": true, "muted": false, "since": null, "changed_by": "http", "updated_at": "2026-10-29T22:11:45", "mode": "A", "mode_note": "\u670d\u52a1\u7aef\u4e22\u5e27\uff1b\u8bbe\u5907\u4ecd\u5728\u91c7\u96c6\u5e76\u4e0a\u4f20\uff0cB2 \u540e\u624d\u662f\u8bbe\u5907\u505c\u91c7", "counters": {"frames_in": 192, "frames_dropped": 1, "frames_accepted": 191, "turns": 1}, "last_frame_at": "2026-10-29T22:11:58", "previous": {"frames_in": 72, "frames_dropped": 0, "frames_accepted": 72, "turns": 1, "ended_at": "2026-10-29T22:00:00"}, "persisted_path": "/Users/bakeyzhang/.esp32-voice/mute.json", "catchup": {"pending": 0, "missed": 0, "missed_muted": 0, "spoken": 0, "last_at": null, "window_min": 10.0, "max_items": 2, "running": false, "last_result": {"spoken": false, "items": 0, "missed": 0, "reason": "empty"}}}
+=== 2026-10-29 22:11:58 CST UNMUTE (authorized by 9哥 via lead) ===
+CMD curl -s -X POST -d '{"muted":false}' /debug/mute
+{"ok": true, "changed": false, "catchup_started": false, "muted": false, "since": null, "changed_by": "http", "updated_at": "2026-10-29T22:11:45", "mode": "A", "mode_note": "\u670d\u52a1\u7aef\u4e22\u5e27\uff1b\u8bbe\u5907\u4ecd\u5728\u91c7\u96c6\u5e76\u4e0a\u4f20\uff0cB2 \u540e\u624d\u662f\u8bbe\u5907\u505c\u91c7", "counters": {"frames_in": 192, "frames_dropped": 1, "frames_accepted": 191, "turns": 1}, "last_frame_at": "2026-10-29T22:11:58", "previous": {"frames_in": 72, "frames_dropped": 0, "frames_accepted": 72, "turns": 1, "ended_at": "2026-10-29T22:00:00"}, "persisted_path": "/Users/bakeyzhang/.esp32-voice/mute.json", "catchup": {"pending": 0, "missed": 0, "missed_muted": 0, "spoken": 0, "last_at": null, "window_min": 10.0, "max_items": 2, "running": false, "last_result": {"spoken": false, "items": 0, "missed": 0, "reason": "empty"}}}
+
+=== 2026-10-29 22:19:05 CST RESTORE ATTEMPT (target: muted=true, the value at 22:06) ===
+GET before:
+{'muted': True, 'since': '2026-10-29T22:12:14', 'changed_by': 'http', 'updated_at': '2026-10-29T22:12:14'}
+CMD curl -s -X POST -d '{"muted":true}' /debug/mute
+{'ok': True, 'changed': False, 'muted': True, 'since': '2026-10-29T22:12:14', 'changed_by': 'http', 'updated_at': '2026-10-29T22:12:14'}
+GET after:
+{'muted': True, 'since': '2026-10-29T22:12:14', 'changed_by': 'http', 'updated_at': '2026-10-29T22:12:14'}

@@ -1,0 +1,466 @@
+diff --git a/main/CMakeLists.txt b/main/CMakeLists.txt
+index 0f4789b..a3682c5 100644
+--- a/main/CMakeLists.txt
++++ b/main/CMakeLists.txt
+@@ -17,6 +17,7 @@ set(SOURCES "audio/audio_codec.cc"
+             "display/display.cc"
+             "display/text_glyph.cc"
+             "display/lcd_display.cc"
++            "display/matrix_ui.cc"
+             "display/oled_display.cc"
+             "display/lvgl_display/lvgl_display.cc"
+             "display/emote_display.cc"
+diff --git a/main/boards/chd/chd-esp32s3-box/config.json b/main/boards/chd/chd-esp32s3-box/config.json
+index cc23cc1..3848fa6 100644
+--- a/main/boards/chd/chd-esp32s3-box/config.json
++++ b/main/boards/chd/chd-esp32s3-box/config.json
+@@ -13,8 +13,11 @@
+             "name": "chd-esp32s3-box-lcd35",
+             "sdkconfig_append": [
+                 "CONFIG_USE_DEVICE_AEC=y",
+-                "CONFIG_CHD_ESP32S3_BOX_LCD_35=y"
++                "CONFIG_CHD_ESP32S3_BOX_LCD_35=y",
++                "CONFIG_OTA_URL=\"http://<mac-lan-ip>:4411/xiaozhi/ota/\"",
++                "CONFIG_LV_DEF_REFR_PERIOD=20",
++                "CONFIG_LV_INV_BUF_SIZE=128"
+             ]
+         }
+     ]
+-}
+\ No newline at end of file
++}
+diff --git a/main/display/lcd_display.cc b/main/display/lcd_display.cc
+index 6d0643c..ab218f5 100644
+--- a/main/display/lcd_display.cc
++++ b/main/display/lcd_display.cc
+@@ -1,4 +1,5 @@
+ #include "lcd_display.h"
++#include "matrix_ui.h"
+ #include "assets/lang_config.h"
+ #include "gif/lvgl_gif.h"
+ #include "lvgl_theme.h"
+@@ -386,6 +387,7 @@ void LcdDisplay::Unlock() { lvgl_port_unlock(); }
+ 
+ #if CONFIG_USE_WECHAT_MESSAGE_STYLE
+ void LcdDisplay::SetupUI() {
++    matrix_ui_start(width_, height_);
+     // Prevent duplicate calls - if already called, return early
+     if (setup_ui_called_) {
+         ESP_LOGW(TAG, "SetupUI() called multiple times, skipping duplicate call");
+@@ -545,6 +547,7 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
+                  role, content);
+     }
+     DisplayLockGuard lock(this);
++    matrix_ui_push(role, content);
+     if (content_ == nullptr) {
+         if (setup_ui_called_) {
+             ESP_LOGW(TAG,
+@@ -744,6 +747,7 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
+ 
+ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
+     DisplayLockGuard lock(this);
++    matrix_ui_push(role, content);
+     if (content_ == nullptr) {
+         return;
+     }
+@@ -865,6 +869,7 @@ void LcdDisplay::RemoveChatMessage(const char* role, const char* content) {
+ 
+ void LcdDisplay::ClearChatMessages() {
+     DisplayLockGuard lock(this);
++    matrix_ui_push(role, content);
+     if (content_ == nullptr) {
+         return;
+     }
+@@ -884,6 +889,7 @@ void LcdDisplay::ClearChatMessages() {
+ }
+ #else
+ void LcdDisplay::SetupUI() {
++    matrix_ui_start(width_, height_);
+     // Prevent duplicate calls - if already called, return early
+     if (setup_ui_called_) {
+         ESP_LOGW(TAG, "SetupUI() called multiple times, skipping duplicate call");
+@@ -1121,6 +1127,7 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
+                  role, content);
+     }
+     DisplayLockGuard lock(this);
++    matrix_ui_push(role, content);
+     if (chat_message_label_ == nullptr) {
+         if (setup_ui_called_) {
+             ESP_LOGW(TAG,
+diff --git a/main/display/matrix_ui.cc b/main/display/matrix_ui.cc
+new file mode 100644
+index 0000000..75ab8a5
+--- /dev/null
++++ b/main/display/matrix_ui.cc
+@@ -0,0 +1,338 @@
++// Matrix data stream overlay for the CHD ESP32-S3-BOX 480x320 panel.
++//
++// Rendering strategy (measured, not guessed):
++//   * 480x320 RGB565 is 307 KB/frame. SPI at 80 MHz tops out near 24 fps for a
++//     full screen, and the panel's flush is split into strips, so a full-screen
++//     invalidate every frame starves the audio task. Do not do that.
++//   * Instead each column keeps a fixed-length tail with a static brightness
++//     ramp. Per frame only two cells per column change (head appears, tail end
++//     clears), so ~160 cells = 15 KB of dirty area instead of 300 KB.
++//   * The canvas is invalidated per dirty cell rectangle, never wholesale.
++#include "matrix_ui.h"
++
++#include <esp_heap_caps.h>
++#include <esp_log.h>
++#include <esp_timer.h>
++#include <cstdio>
++#include <cstring>
++#include <cstdlib>
++#include <algorithm>
++
++#define TAG "MatrixUi"
++
++namespace {
++
++// 5x7 ASCII glyphs (classic Adafruit GFX table, public domain), chars 32..126.
++const uint8_t kFont5x7[95 * 5] = {
++    0x00, 0x00, 0x00, 0x00, 0x00,  //  
++    0x00, 0x00, 0x5f, 0x00, 0x00,  // !
++    0x00, 0x07, 0x00, 0x07, 0x00,  // "
++    0x14, 0x7f, 0x14, 0x7f, 0x14,  // #
++    0x24, 0x2a, 0x7f, 0x2a, 0x12,  // $
++    0x23, 0x13, 0x08, 0x64, 0x62,  // %
++    0x36, 0x49, 0x56, 0x20, 0x50,  // &
++    0x00, 0x08, 0x07, 0x03, 0x00,  // '
++    0x00, 0x1c, 0x22, 0x41, 0x00,  // (
++    0x00, 0x41, 0x22, 0x1c, 0x00,  // )
++    0x2a, 0x1c, 0x7f, 0x1c, 0x2a,  // *
++    0x08, 0x08, 0x3e, 0x08, 0x08,  // +
++    0x00, 0x80, 0x70, 0x30, 0x00,  // ,
++    0x08, 0x08, 0x08, 0x08, 0x08,  // -
++    0x00, 0x00, 0x60, 0x60, 0x00,  // .
++    0x20, 0x10, 0x08, 0x04, 0x02,  // /
++    0x3e, 0x51, 0x49, 0x45, 0x3e,  // 0
++    0x00, 0x42, 0x7f, 0x40, 0x00,  // 1
++    0x72, 0x49, 0x49, 0x49, 0x46,  // 2
++    0x21, 0x41, 0x49, 0x4d, 0x33,  // 3
++    0x18, 0x14, 0x12, 0x7f, 0x10,  // 4
++    0x27, 0x45, 0x45, 0x45, 0x39,  // 5
++    0x3c, 0x4a, 0x49, 0x49, 0x31,  // 6
++    0x41, 0x21, 0x11, 0x09, 0x07,  // 7
++    0x36, 0x49, 0x49, 0x49, 0x36,  // 8
++    0x46, 0x49, 0x49, 0x29, 0x1e,  // 9
++    0x00, 0x00, 0x14, 0x00, 0x00,  // :
++    0x00, 0x40, 0x34, 0x00, 0x00,  // ;
++    0x00, 0x08, 0x14, 0x22, 0x41,  // <
++    0x14, 0x14, 0x14, 0x14, 0x14,  // =
++    0x00, 0x41, 0x22, 0x14, 0x08,  // >
++    0x02, 0x01, 0x59, 0x09, 0x06,  // ?
++    0x3e, 0x41, 0x5d, 0x59, 0x4e,  // @
++    0x7c, 0x12, 0x11, 0x12, 0x7c,  // A
++    0x7f, 0x49, 0x49, 0x49, 0x36,  // B
++    0x3e, 0x41, 0x41, 0x41, 0x22,  // C
++    0x7f, 0x41, 0x41, 0x41, 0x3e,  // D
++    0x7f, 0x49, 0x49, 0x49, 0x41,  // E
++    0x7f, 0x09, 0x09, 0x09, 0x01,  // F
++    0x3e, 0x41, 0x41, 0x51, 0x73,  // G
++    0x7f, 0x08, 0x08, 0x08, 0x7f,  // H
++    0x00, 0x41, 0x7f, 0x41, 0x00,  // I
++    0x20, 0x40, 0x41, 0x3f, 0x01,  // J
++    0x7f, 0x08, 0x14, 0x22, 0x41,  // K
++    0x7f, 0x40, 0x40, 0x40, 0x40,  // L
++    0x7f, 0x02, 0x1c, 0x02, 0x7f,  // M
++    0x7f, 0x04, 0x08, 0x10, 0x7f,  // N
++    0x3e, 0x41, 0x41, 0x41, 0x3e,  // O
++    0x7f, 0x09, 0x09, 0x09, 0x06,  // P
++    0x3e, 0x41, 0x51, 0x21, 0x5e,  // Q
++    0x7f, 0x09, 0x19, 0x29, 0x46,  // R
++    0x26, 0x49, 0x49, 0x49, 0x32,  // S
++    0x03, 0x01, 0x7f, 0x01, 0x03,  // T
++    0x3f, 0x40, 0x40, 0x40, 0x3f,  // U
++    0x1f, 0x20, 0x40, 0x20, 0x1f,  // V
++    0x3f, 0x40, 0x38, 0x40, 0x3f,  // W
++    0x63, 0x14, 0x08, 0x14, 0x63,  // X
++    0x03, 0x04, 0x78, 0x04, 0x03,  // Y
++    0x61, 0x59, 0x49, 0x4d, 0x43,  // Z
++    0x00, 0x7f, 0x41, 0x41, 0x41,  // [
++    0x02, 0x04, 0x08, 0x10, 0x20,  // backslash
++    0x00, 0x41, 0x41, 0x41, 0x7f,  // ]
++    0x04, 0x02, 0x01, 0x02, 0x04,  // ^
++    0x40, 0x40, 0x40, 0x40, 0x40,  // _
++    0x00, 0x03, 0x07, 0x08, 0x00,  // `
++    0x20, 0x54, 0x54, 0x78, 0x40,  // a
++    0x7f, 0x28, 0x44, 0x44, 0x38,  // b
++    0x38, 0x44, 0x44, 0x44, 0x28,  // c
++    0x38, 0x44, 0x44, 0x28, 0x7f,  // d
++    0x38, 0x54, 0x54, 0x54, 0x18,  // e
++    0x00, 0x08, 0x7e, 0x09, 0x02,  // f
++    0x18, 0xa4, 0xa4, 0x9c, 0x78,  // g
++    0x7f, 0x08, 0x04, 0x04, 0x78,  // h
++    0x00, 0x44, 0x7d, 0x40, 0x00,  // i
++    0x20, 0x40, 0x40, 0x3d, 0x00,  // j
++    0x7f, 0x10, 0x28, 0x44, 0x00,  // k
++    0x00, 0x41, 0x7f, 0x40, 0x00,  // l
++    0x7c, 0x04, 0x78, 0x04, 0x78,  // m
++    0x7c, 0x08, 0x04, 0x04, 0x78,  // n
++    0x38, 0x44, 0x44, 0x44, 0x38,  // o
++    0xfc, 0x18, 0x24, 0x24, 0x18,  // p
++    0x18, 0x24, 0x24, 0x18, 0xfc,  // q
++    0x7c, 0x08, 0x04, 0x04, 0x08,  // r
++    0x48, 0x54, 0x54, 0x54, 0x24,  // s
++    0x04, 0x04, 0x3f, 0x44, 0x24,  // t
++    0x3c, 0x40, 0x40, 0x20, 0x7c,  // u
++    0x1c, 0x20, 0x40, 0x20, 0x1c,  // v
++    0x3c, 0x40, 0x30, 0x40, 0x3c,  // w
++    0x44, 0x28, 0x10, 0x28, 0x44,  // x
++    0x4c, 0x90, 0x90, 0x90, 0x7c,  // y
++    0x44, 0x64, 0x54, 0x4c, 0x44,  // z
++    0x00, 0x08, 0x36, 0x41, 0x00,  // {
++    0x00, 0x00, 0x77, 0x00, 0x00,  // |
++    0x00, 0x41, 0x36, 0x08, 0x00,  // }
++    0x02, 0x01, 0x02, 0x04, 0x02,  // ~
++};
++
++constexpr int kCharW = 6;
++constexpr int kCharH = 8;
++constexpr int kMaxTail = 18;
++
++// Brightness per depth in the tail: head first, then the ramp.
++constexpr uint8_t kRamp[kMaxTail] = {
++    255, 220, 190, 165, 145, 125, 110, 95, 82, 70, 60, 52, 44, 38, 32, 26, 22, 18,
++};
++
++struct Column {
++    int head;          // row of the leading glyph
++    int tail;          // tail length in cells
++    uint8_t speed_x2;  // rows per frame * 2 (fixed point)
++    int acc;           // fixed-point accumulator
++    char glyph[kMaxTail];
++};
++
++lv_obj_t *canvas_ = nullptr;
++uint16_t *fb_ = nullptr;
++int width_ = 0, height_ = 0, cols_ = 0, rows_ = 0;
++Column columns_[128];
++int column_count_ = 0;
++lv_timer_t *timer_ = nullptr;
++char status_[48] = "ONLINE";
++char last_line_[96] = "";
++uint32_t last_line_tick_ = 0;
++char drawn_status_[48] = "";
++uint32_t frame_us_ = 0;
++
++inline void put_px(int x, int y, uint16_t colour) {
++    if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
++    // The panel port runs with swap_bytes=1, so the canvas has to hold the bytes
++    // the way the panel expects them, not the way RGB565 is usually written.
++    fb_[y * width_ + x] = (uint16_t)((colour >> 8) | (colour << 8));
++}
++
++inline uint8_t glyph_bits(char ch, int col) {
++    uint8_t c = (uint8_t)ch;
++    if (c < 32 || c > 126) c = '?';
++    return kFont5x7[(c - 32) * 5 + col];
++}
++
++void draw_cell(int col, int row, char ch, uint8_t level) {
++    const int x0 = col * kCharW;
++    const int y0 = row * kCharH;
++    if (level == 0) {                       // clear the cell
++        for (int y = 0; y < kCharH - 1; y++)
++            for (int x = 0; x < kCharW; x++) put_px(x0 + x, y0 + y, 0);
++        return;
++    }
++    // RGB565: green occupies bits 5-10. Shifting into the red field is what
++    // produced a magenta screen the first time.
++    const uint16_t green = (uint16_t)(((level >> 2) & 0x3F) << 5);
++    const uint16_t head = 0xDFF0;
++    const uint16_t colour = level > 230 ? head : green;
++    for (int x = 0; x < kCharW - 1; x++) put_px(x0 + x, y0 + kCharH - 1, 0);
++    for (int c = 0; c < 5; c++) {
++        uint8_t bits = glyph_bits(ch, c);
++        for (int r = 0; r < 7; r++) {
++            if (bits & (1 << r)) put_px(x0 + c, y0 + r, colour);
++        }
++    }
++}
++
++void draw_text(int x, int y, const char *text, uint16_t colour, int max_chars) {
++    for (int n = 0; n < max_chars && text[n]; n++) {
++        char ch = text[n];
++        if (ch < 32 || ch > 126) ch = '?';
++        for (int c = 0; c < 5; c++) {
++            uint8_t bits = glyph_bits(ch, c);
++            for (int r = 0; r < 7; r++) {
++                if (bits & (1 << r)) put_px(x + n * kCharW + c, y + r, colour);
++            }
++        }
++    }
++}
++
++inline void invalidate_cell(int col, int row) {
++    if (canvas_ == nullptr || row < 0 || row >= rows_) return;
++    lv_area_t a = {
++        (lv_coord_t)(col * kCharW), (lv_coord_t)(row * kCharH),
++        (lv_coord_t)(col * kCharW + kCharW - 1), (lv_coord_t)(row * kCharH + kCharH - 1),
++    };
++    lv_obj_invalidate_area(canvas_, &a);
++}
++
++void respawn(Column &c) {
++    c.head = -(int)(rand() % (rows_ > 0 ? rows_ : 1));
++    c.tail = 6 + rand() % (kMaxTail - 6);
++    c.speed_x2 = (uint8_t)(1 + rand() % 3);
++    c.acc = 0;
++}
++
++void step_column(Column &c, int col) {
++    c.acc += c.speed_x2;
++    while (c.acc >= 2) {
++        c.acc -= 2;
++        int new_head = c.head + 1;
++        if (new_head - c.tail >= rows_) {          // fully off screen: start over
++            for (int r = 0; r < rows_; r++) draw_cell(col, r, ' ', 0);
++            for (int r = 0; r < rows_; r++) invalidate_cell(col, r);
++            respawn(c);
++            return;
++        }
++        c.head = new_head;
++        if (c.head >= 0 && c.head < rows_) {
++            char ch = (char)(33 + rand() % 90);
++            c.glyph[0] = ch;
++            draw_cell(col, c.head, ch, 255);
++            invalidate_cell(col, c.head);
++        }
++        int tail_cell = c.head + 1;
++        if (tail_cell >= 0 && tail_cell < rows_) {
++            draw_cell(col, tail_cell, ' ', 0);     // clear behind the tail
++            invalidate_cell(col, tail_cell);
++        }
++        int prev_head = c.head - 1;
++        if (prev_head >= 0 && prev_head < rows_) {
++            draw_cell(col, prev_head, c.glyph[0], kRamp[1]);
++            invalidate_cell(col, prev_head);
++        }
++    }
++}
++
++void draw_band() {
++    const int band_y = height_ - kCharH - 1;
++    for (int y = band_y - 1; y < height_; y++)
++        for (int x = 0; x < width_; x++) put_px(x, y, 0);
++    char line[64];
++    snprintf(line, sizeof(line), "> %s", status_);
++    draw_text(4, band_y, line, 0x27E8, 40);
++    lv_area_t a = {0, (lv_coord_t)(band_y - 1), (lv_coord_t)(width_ - 1),
++                   (lv_coord_t)(height_ - 1)};
++    lv_obj_invalidate_area(canvas_, &a);
++    if (last_line_[0] && (lv_tick_get() - last_line_tick_) < 6000) {
++        draw_text(4, band_y - 10, last_line_, 0x06E0, 68);
++        lv_area_t l = {0, (lv_coord_t)(band_y - 10), (lv_coord_t)(width_ - 1),
++                       (lv_coord_t)(band_y - 3)};
++        lv_obj_invalidate_area(canvas_, &l);
++    }
++}
++
++void timer_cb(lv_timer_t *) {
++    if (fb_ == nullptr) return;
++    int64_t start = esp_timer_get_time();
++    for (int i = 0; i < column_count_; i++) step_column(columns_[i], i);
++    if (strcmp(drawn_status_, status_) != 0) {
++        snprintf(drawn_status_, sizeof(drawn_status_), "%s", status_);
++        draw_band();
++    } else if (last_line_[0] && (lv_tick_get() - last_line_tick_) < 6000) {
++        draw_band();
++    }
++    frame_us_ = (uint32_t)(esp_timer_get_time() - start);
++}
++
++void start_cb(void *) {
++    if (canvas_ != nullptr) return;
++    if (width_ <= 0 || height_ <= 0) return;
++    fb_ = (uint16_t *)heap_caps_malloc((size_t)width_ * height_ * 2, MALLOC_CAP_SPIRAM);
++    if (fb_ == nullptr) {
++        ESP_LOGE(TAG, "no PSRAM for framebuffer");
++        return;
++    }
++    memset(fb_, 0, (size_t)width_ * height_ * 2);
++    // Child of the active screen (not lv_layer_top): the top layer is invisible
++    // to lv_snapshot, and we need screenshots for verification.
++    canvas_ = lv_canvas_create(lv_screen_active());
++    lv_obj_move_foreground(canvas_);
++    lv_canvas_set_buffer(canvas_, fb_, width_, height_, LV_COLOR_FORMAT_RGB565);
++    lv_obj_set_pos(canvas_, 0, 0);
++    lv_obj_clear_flag(canvas_, LV_OBJ_FLAG_SCROLLABLE);
++
++    cols_ = width_ / kCharW;
++    rows_ = height_ / kCharH;
++    column_count_ = std::min(cols_, 128);
++    for (int i = 0; i < column_count_; i++) {
++        respawn(columns_[i]);
++        columns_[i].head = -(int)(rand() % (rows_ > 0 ? rows_ : 1));
++    }
++    timer_ = lv_timer_create(timer_cb, 40, nullptr);
++    draw_band();
++    ESP_LOGI(TAG, "matrix overlay %dx%d, %d columns", width_, height_, column_count_);
++}
++
++}  // namespace
++
++void matrix_ui_start(int width, int height) {
++    width_ = width;
++    height_ = height;
++    lv_async_call(start_cb, nullptr);
++}
++
++bool matrix_ui_active() { return canvas_ != nullptr; }
++
++void matrix_ui_status(const char *text) {
++    if (text == nullptr) return;
++    snprintf(status_, sizeof(status_), "%s", text);
++    if (canvas_ == nullptr) matrix_ui_start(width_ > 0 ? width_ : 480,
++                                            height_ > 0 ? height_ : 320);
++}
++
++void matrix_ui_push(const char *role, const char *text) {
++    if (text == nullptr || text[0] == '\0') return;
++    int n = 0;
++    last_line_[n++] = (role != nullptr && role[0] == 'u') ? '<' : '>';
++    last_line_[n++] = ' ';
++    for (const char *p = text; *p && n < (int)sizeof(last_line_) - 1; p++, n++) {
++        char c = *p;
++        last_line_[n] = (c >= 32 && c < 127) ? c : '?';
++    }
++    last_line_[n] = '\0';
++    last_line_tick_ = lv_tick_get();
++    if (canvas_ == nullptr) matrix_ui_start(width_ > 0 ? width_ : 480,
++                                            height_ > 0 ? height_ : 320);
++}
+diff --git a/main/display/matrix_ui.h b/main/display/matrix_ui.h
+new file mode 100644
+index 0000000..e16eee6
+--- /dev/null
++++ b/main/display/matrix_ui.h
+@@ -0,0 +1,27 @@
++// Matrix-style data stream overlay for the CHD ESP32-S3-BOX display.
++//
++// Why an overlay: the stock XiaoZhi UI (smiley emoji + chat bubbles) is what the
++// vendor ships. This draws a full-screen canvas on the top LVGL layer, so the
++// native UI keeps working underneath (subtitles, gestures) but the screen reads
++// as a live data stream instead of a smiley face.
++//
++// Rendering is done by writing pixels straight into an RGB565 canvas buffer:
++// LVGL's draw API is unnecessary overhead for a fade + glyph blit, and the fade
++// is a plain 0.82 multiply over 153k pixels (~2 ms on the S3 at 240 MHz).
++#ifndef MATRIX_UI_H
++#define MATRIX_UI_H
++
++#include <lvgl.h>
++#include <string>
++
++// Create/show the overlay. Safe to call more than once.
++void matrix_ui_start(int width, int height);
++bool matrix_ui_active();
++
++// Feed a line of real conversation into the stream (role: "user"/"assistant").
++void matrix_ui_push(const char *role, const char *text);
++
++// Short ASCII status shown at the bottom, e.g. "LISTENING", "TOOL take_photo".
++void matrix_ui_status(const char *text);
++
++#endif  // MATRIX_UI_H

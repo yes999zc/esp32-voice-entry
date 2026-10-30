@@ -1,0 +1,18 @@
+# M7 Step 1 boot log (rev3, 2026-10-27 10:56)
+# captured over /dev/cu.usbmodem31301 @115200 after RTS reset
+
+I (1158) Chd-Esp32s3-Box-Board: SetupUI >>>>>>>>>
+I (1178) face_anim: Parent: 320x320, face_sz: 320, eye: 144px, mouth: 144x121px
+I (1178) face_anim: canvas buffer 62208 B -> 0x3c6a74d8 (PSRAM)
+I (1178) face_anim: canvas buffer 62208 B -> 0x3c6b68dc (PSRAM)
+I (1188) face_anim: canvas buffer 52272 B -> 0x3c6c5ce0 (PSRAM)
+I (1198) face_anim: Face animation initialized successfully
+I (1208) Chd-Esp32s3-Box-Board: kawaii face ready: panel=320x320
+I (8798) Chd-Esp32s3-Box-Board: face emotion: robot_2 -> 0
+I (8998) Chd-Esp32s3-Box-Board: face emotion: neutral -> 0
+
+# audio pipeline in the same boot (unchanged, for regression reference):
+I (8408) WakeWordCache: Allocated 64000 bytes in PSRAM
+I (8518) AFE: Input PCM Config: total 2 channels(1 microphone, 1 playback), sample rate:16000
+I (8528) AFE: AFE Pipeline: [input] -> |AEC(FD_LOW_COST, NLP_VERY_AGGRESSIVE)| -> |VAD(WebRTC)| -> |WakeNet(wn9_nihaoxiaozhi_tts,)| -> [output]
+I (8138) WifiBoard: Connected to WiFi: <wifi-ssid> / Got IP: <device-lan-ip>

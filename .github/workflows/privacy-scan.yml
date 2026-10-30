@@ -1,0 +1,22 @@
+name: privacy-scan
+on: [push, pull_request]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No LAN IP / SSID / account in tracked files
+        env:
+          # The literal terms (home SSID, account name) are kept in the repository secret
+          # PRIVACY_TERMS, never in this file: a public workflow would otherwise publish
+          # exactly what it is supposed to protect.
+          PRIVACY_TERMS: ${{ secrets.PRIVACY_TERMS }}
+        run: |
+          pattern='192\.168\.[0-9]+\.[0-9]+'
+          if [ -n "$PRIVACY_TERMS" ]; then pattern="$pattern|$PRIVACY_TERMS"; fi
+          hits=$(git grep -nIE "$pattern" -- . ':!.github/workflows/privacy-scan.yml' || true)
+          # 192.168.4.1 is the ESP32 soft-AP's own fixed gateway
+          # (managed_components/78__esp-wifi-connect): the quickstart must tell the reader to
+          # open it, so it is device documentation, not user network data.
+          hits=$(printf '%s\n' "$hits" | grep -vE '(^|[^0-9.])192\.168\.4\.1([^0-9]|$)' || true)
+          if [ -n "$hits" ]; then echo "$hits"; exit 1; fi
