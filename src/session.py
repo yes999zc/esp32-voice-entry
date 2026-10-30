@@ -456,6 +456,9 @@ class Session:
         self.history: list[dict] = []
         self.speaking = False
         self.turn: asyncio.Task | None = None
+        # True between "a frame arrived while muted" and the first unmuted
+        # frame; used to reset the listen window once per mute episode.
+        self._muted_seen = False
         self.alive = True
         self._mcp_id = 10
         self._pending: dict[int, asyncio.Future] = {}
@@ -718,7 +721,15 @@ class Session:
                 # line, so a muted board produces none of them. The websocket
                 # stays open and JSON (hello/listen) is unaffected; the device
                 # keeps capturing and uploading until B2 changes the firmware.
+                self._muted_seen = True
                 return
+            if getattr(self, "_muted_seen", False):
+                # The board drops audio while muted, so VAD/barge counters are
+                # frozen at whatever they were when the switch flipped. Start
+                # the listen window clean instead of carrying that half-state
+                # into the first unmuted segment (2026-10-30 mute toggles).
+                self._muted_seen = False
+                self._reset_listen_window()
         pcm = self.codec.decode(frame)
         if self.speaking:
             # Device AEC is on. Measured 2026-10-27: our own TTS comes back at
@@ -882,6 +893,13 @@ class Session:
                     and getattr(self, "_face_state", None) != "barge-in"):
                 await self._push_state_face("listening")
         elif kind == "abort":
+            if self._abort_is_echo_of_mute():
+                # The board emits a burst of aborts around a mute toggle
+                # (2026-10-30: 5-24 per toggle). With nothing running they were
+                # no-ops that still churned the log and, when a turn happened to
+                # be in flight, cancelled it for no user-visible reason.
+                self.log("[abort] ignored while muted and idle:", msg.get("reason"))
+                return
             self.log("[abort]", msg.get("reason"))
             await self._interrupt()
         elif kind == "mcp":
@@ -903,6 +921,30 @@ class Session:
                 self.log("[mcp] error", json.dumps(payload["error"], ensure_ascii=False)[:160])
             else:
                 self.log("[mcp] msg", json.dumps(payload, ensure_ascii=False)[:160])
+
+    def _abort_is_echo_of_mute(self) -> bool:
+        """Aborts that merely follow a mute toggle must not touch the pipeline.
+
+        Only when muted AND nothing is running: a real abort during speech or a
+        turn still has to stop it. Kept as a predicate so the rule is testable
+        without a websocket.
+        """
+        mute = getattr(self, "mute", None)
+        if mute is None or not mute.muted:
+            return False
+        if self.speaking:
+            return False
+        return self.turn is None or self.turn.done()
+
+    def _reset_listen_window(self) -> None:
+        """Drop half-finished listen/answer state after a muted stretch."""
+        self._first_audio_at = None
+        self._reply_ready = False
+        if not self.speaking:
+            self._barge_ms = 0
+            self._barge_quiet_ms = 0
+            self._barge_onset_at = None
+        self.log("[listen] reset after mute")
 
     async def _interrupt(self):
         if self.turn and not self.turn.done():
