@@ -941,10 +941,12 @@ class Session:
     def _reset_listen_window(self) -> None:
         """Clear the session's half-finished listen/answer counters.
 
-        Scope note: the VAD lives in `run()` as a local and is not touched here,
-        and no audio was fed to it while muted, so its buffer is already clean.
-        What can go stale is session bookkeeping - when the first answer audio
-        started, whether a reply is ready, and the barge counters.
+        Scope note: the VAD lives in `run()` as a local and is not touched here.
+        It keeps the audio it was fed before the mute, so the first segment after
+        unmuting can still span the mute boundary; clearing that would need a VAD
+        reset and is out of scope here. What this method does clear is session
+        bookkeeping - when the first answer audio started, whether a reply is
+        ready, and the barge counters.
         """
         self._first_audio_at = None
         self._reply_ready = False
