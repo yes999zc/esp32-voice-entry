@@ -521,4 +521,6 @@ bootloader/app checksum 与 validation hash 均 valid。
 - reviewer 最终 **PASS**（含端到端：用下载的 matcha+vocoder 实例化 `MatchaTts` 合成成功，20,382 samples @22,050 Hz）。
   另按其非阻塞建议补了 VAD 直链命令（`asr-models/silero_vad.onnx`，实测 200/643,854 B = 本机文件），
   并把「当前单 commit」改为「根提交 `3f95a4b`（历史另有 a3980dd 文档提交）」。
-- 下一步：commit（README + quickstart + HANDOFF）→ push → privacy-scan 绿。
+- 已提交推送 `cfe1f87`（README + quickstart + HANDOFF，+347/−33）；privacy-scan run 40986502767 **success**。
+  产物：README 中英双语「Getting started / 使用指导书」6 步 + 两张表（必填信息 7 项、三种刷法）；
+  quickstart 全面换成 persona.5，并补齐 ASR/VAD/TTS 三套模型的下载命令（三条 URL 均实测 200）。
