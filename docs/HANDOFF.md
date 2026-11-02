@@ -673,3 +673,25 @@ bootloader/app checksum 与 validation hash 均 valid。
 - **我的失误**：为清死锁重启了 `127.0.0.1:8642` 的 Hermes 网关，而那是**共享网关**（Telegram 也在用），导致 9哥 Telegram 侧中断。
 - 待决策（隔离方案）：给 esp32 单独起一个 Hermes gateway（独立端口 + 独立 profile），把 `llm.hermes.base_url` 指过去，
   以后运维只动 esp32 那条；或约定"永不重启网关"，只靠 120 s 超时 + 请求级取消。
+
+### 2026-11-02 12:2x 网关隔离（方案 A，进行中）
+- 背景：8642 是共享 Hermes 网关（Telegram + 本机 esp32 都走它），我为清死锁重启它导致 9哥 Telegram 中断。
+- 已做：新建独立 profile `~/.hermes-esp32`（复制 `config.yaml` + `.env`，`API_SERVER_PORT=8643`、
+  独立 `API_SERVER_KEY` 存 `~/.hermes-esp32/esp_key.txt` 600、`kanban.dispatch_in_gateway: false`、
+  telegram 平台在该 profile 内 `enabled: false`）；`hermes gateway run`（HERMES_HOME 指向该 profile）已在 8643 监听，
+  `/v1/models` 带新 key 返回 `hermes-agent`。
+- 服务端取 key 的方式（已核）：`Esp32VoiceService` 是 Swift 启动器，执行
+  `set -a && . ~/.hermes/.env && cd src && exec ../.venv313/bin/python server.py --config ../config.yaml`，
+  即 key 来自 `~/.hermes/.env`（`API_SERVER_KEY`），`_hermes_key()` 优先读 `HERMES_API_KEY`。
+- 待做：把 `config.yaml` 的 `llm.hermes.base_url` 指向 `http://127.0.0.1:8643/v1`，在 `~/.hermes/.env` 增加
+  `HERMES_API_KEY=<esp key>`，重启服务，真机验证一轮对话；并给 8643 装成 launchd 常驻（现在是我 nohup 起的）。
+
+### 网关隔离完成（2026-11-02 12:1x，方案 A）
+- **ESP32 现在走自己的网关**：`~/.hermes-esp32` 独立 profile + `com.bakey.hermes-esp32` launchd 服务（RunAtLoad+KeepAlive），
+  监听 `127.0.0.1:8643`，独立 `API_SERVER_KEY`（`~/.hermes-esp32/esp_key.txt` 600）；该 profile 内
+  `kanban.dispatch_in_gateway: false`、telegram 平台关闭，避免双跑定时任务/抢 bot。
+- 服务端指向：`config.local.yaml`（`config.yaml` 是它的软链，且已被 .gitignore）`llm.hermes.base_url` → `http://127.0.0.1:8643/v1`；
+  `~/.hermes/.env` 追加 `HERMES_API_KEY=<esp key>`（`_hermes_key()` 优先读它）。
+- 验证：8643 直连 `POST /v1/chat/completions` 返回「收到」；真机一轮 `[asr] 现在几点。` →
+  `[tts] '当前时间是中午12点18分…'` 正常；**8642（Telegram 那条）全程未动**（PID 94445 仍在）。
+- 运维约定（写死）：以后只重启 `com.bakey.hermes-esp32`（或 kill 8643 的进程），**不再碰 8642**。
