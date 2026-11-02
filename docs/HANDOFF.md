@@ -726,3 +726,10 @@ bootloader/app checksum 与 validation hash 均 valid。
 - 已加的安全闸：① 非微信前置则拒绝输入（防止把字打进别的 App）；② 必须存在标题含联系人的窗口才发送。
 - 待办（下轮）：改用 AX 直接点聊天列表行（`rows of table`）×或让语音链路（Hermes 后台进程）来调，
   当前 shell 与 GUI 抢焦点，UI 自动化不稳定。
+
+### 2026-11-02 12:5x 两个操作事故（本人）
+- **误输入**：`wechat-send` 早期版本在「焦点不在微信」时仍会 `keystroke`，字会打进当时的前置 App（9哥 看到屏幕出现乱码/重复字符）。
+  已加闸：非微信前置直接拒绝输入；无同名聊天窗口不发送。目前已停掉全部 UI 自动化。
+- **误杀**：为清残留执行 `pkill -f osascript`，把 **Telegram 网关的启动包装器**（`hermes gateway run --external-supervisor`）一起杀了，
+  8642 短暂离线；已 `launchctl kickstart -k ai.hermes.gateway` 恢复（新 PID 28617）。教训：杀进程必须按完整命令行匹配，
+  不许用 `pkill -f osascript` 这种宽匹配。
