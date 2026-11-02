@@ -657,7 +657,7 @@ bootloader/app checksum 与 validation hash 均 valid。
   ② 构造驱动前 `i2c_master_probe` 重试 10×100 ms（Cover 冷启动），仍失败 → `ESP_LOGE` + 返回 false（**不带触摸也启动**）；
   ③ `assert(tp)` 换成带日志的优雅失败 + `esp_lcd_panel_io_del`。
 - 独立 reviewer **PASS**（无阻塞；非阻塞三条：开机前 5 s 错误不打印、`s_touch_poll_fails` 语义变、注释写 ~1 s 实为 1.5 s）。
-- 构建 exit 0、`error:` 0；`build/xiaozhi.bin` 2,864,688 B；隐私串：`192.168.5.27`=0 / `${XIAOZHI_OTA_BASE}`=0 / `rui-ota.invalid`=1。
+- 构建 exit 0、`error:` 0；`build/xiaozhi.bin` 2,864,688 B；隐私串：`<server-ip>`=0 / `${XIAOZHI_OTA_BASE}`=0 / `rui-ota.invalid`=1。
 - 已刷 app-only `0x20000`（Hash verified），温启动正常（uptime 21 s+、触摸心跳正常、无 abort）。
 - persona.7 产物与 SHA256SUMS 已备在 `/tmp/release-p7/`：
   app `47d4d4a53cfeceafc7aab3abb20dd0a86d4d64d6e4da340574fa486d2d3ea973`（2,864,688 B）、
@@ -741,7 +741,7 @@ bootloader/app checksum 与 validation hash 均 valid。
   对外动作（发消息/放音/删文件）先一句话确认收件人或对象；不念密钥/口令/完整路径；长任务先说一句再报结果。
 - **技能 1 `nas-music`**：`play.sh <关键词>` 通过 Navidrome/Subsonic (`search3` + `stream.view`) 取首条结果
   用 `ffplay` 播放并回读标题；`stop.sh` 只杀自己起的播放器（pidfile + `pkill -x ffplay`）。
-  凭据走环境变量 `NAVIDROME_URL/USER/PASS`；已写入 URL(192.168.5.168:4533) 与 USER，**PASS 待 9哥 提供**。
+  凭据走环境变量 `NAVIDROME_URL/USER/PASS`；已写入 NAS URL 与 USER，**PASS 待 9哥 提供**。
 - **技能 2 `wechat-send`**：`send.sh <contact> <message>` 打开微信→⌘F 搜索→**校验窗口标题包含联系人**，
   不匹配即 `abort: title mismatch` 中止（防发错人）→输入并回车；SKILL.md 要求收件人不明确时先问一句。
 - 已 `launchctl kickstart -k com.bakey.hermes-esp32` 重载，`hermes skills list` 确认两个技能 **enabled**。
