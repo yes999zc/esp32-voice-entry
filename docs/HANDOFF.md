@@ -606,6 +606,7 @@ bootloader/app checksum 与 validation hash 均 valid。
   `ESP_ERROR_CHECK failed: esp_err_t 0x108 (ESP_ERR_INVALID_RESPONSE)`（FT5x06 I2C 读失败）→ abort → 重启；
   OTA 检查来不及完成，屏幕提示「检查新版本失败」。
 - 约 30–60 s 后自行恢复：当前 uptime 47 s+、触摸心跳与按下事件正常、服务端 `[ota] … -> ws://…` 与 `[conn]` 正常。
-  推断诱因：拔 TF 卡/断电时的电源或 I2C 瞬态（非固件逻辑），非永久故障。
+  诱因**已确认**：9哥 拨了 ON 开关做断电重启（冷启动时触摸控制器尚未就绪 → I2C NAK → abort → 重启；
+  热重启后控制器已供电，故几次之后自行恢复）。不是 OTA/网络问题。
 - 待改进（建议开卡）：触摸初始化用 `ESP_ERROR_CHECK` 会在瞬态 I2C 错误时 abort → 重启循环；
   应改为「记录日志 + 继续启动（触摸不可用但设备可用）」，避免一次瞬态把设备拖进循环。
