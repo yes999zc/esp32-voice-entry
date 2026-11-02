@@ -610,3 +610,19 @@ bootloader/app checksum 与 validation hash 均 valid。
   热重启后控制器已供电，故几次之后自行恢复）。不是 OTA/网络问题。
 - 待改进（建议开卡）：触摸初始化用 `ESP_ERROR_CHECK` 会在瞬态 I2C 错误时 abort → 重启循环；
   应改为「记录日志 + 继续启动（触摸不可用但设备可用）」，避免一次瞬态把设备拖进循环。
+
+## 2026-11-02 11:1x 触摸瞬态加固（卡：冷启动不再重启循环）
+
+- 根因确认：`esp_lvgl_port_touch.c:127` 把 `esp_lcd_touch_read_data` 包在 `ESP_ERROR_CHECK` 里；
+  本板 `TouchCountedRead()` 原样返回 I2C 错误 → 一次读失败就 abort → 重启循环（冷启动触摸控制器未就绪时高发）。
+- 修复（`f7ef573b`，只动 `chd_esp32s3_box_board.cc`，+42/−1）：
+  ① `TouchCountedRead` 读失败时 `tp->data.points=0` + 限流 WARN（5 s）+ **返回 ESP_OK**（单帧丢触摸无害）；
+  ② 构造驱动前 `i2c_master_probe` 重试 10×100 ms（Cover 冷启动），仍失败 → `ESP_LOGE` + 返回 false（**不带触摸也启动**）；
+  ③ `assert(tp)` 换成带日志的优雅失败 + `esp_lcd_panel_io_del`。
+- 独立 reviewer **PASS**（无阻塞；非阻塞三条：开机前 5 s 错误不打印、`s_touch_poll_fails` 语义变、注释写 ~1 s 实为 1.5 s）。
+- 构建 exit 0、`error:` 0；`build/xiaozhi.bin` 2,864,688 B；隐私串：`192.168.5.27`=0 / `${XIAOZHI_OTA_BASE}`=0 / `rui-ota.invalid`=1。
+- 已刷 app-only `0x20000`（Hash verified），温启动正常（uptime 21 s+、触摸心跳正常、无 abort）。
+- persona.7 产物与 SHA256SUMS 已备在 `/tmp/release-p7/`：
+  app `47d4d4a53cfeceafc7aab3abb20dd0a86d4d64d6e4da340574fa486d2d3ea973`（2,864,688 B）、
+  merged `d36199d274540d91a43c3308553a8493b43ba10406bddb1fde4d8aee0269183d`（10,164,189 B）；app 段 cmp exit 0。
+- **待确认**：9哥 拨 ON 开关冷启动后是否还循环；确认后发 `v2.5.3-persona.7` 并回填 release URL。
