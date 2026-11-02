@@ -651,3 +651,13 @@ bootloader/app checksum 与 validation hash 均 valid。
   我方只能做到「立刻放手 + 关闭上游流 + 超时收口」；**网关内部已启动的 agent 循环仍会继续**（实测 11:19 断线后跑到 11:24:14 才自行结束）。
   根治需要 Hermes 提供 cancel 接口，属上游需求。
 - 仍属 [未验证]：真机「长任务 → 立刻断电 → 无遗留动作」的端到端（需要一次会跑几分钟的 agent 任务 + 断电时机配合）。
+
+### task-1 评审后二修（2026-11-02 11:5x）
+- reviewer 对 `6fc6262` 判 **CHANGES**：B1 `_cancel_turn` 的 `except CancelledError` 会吞掉**调用方自身**的取消
+  （窗口仅 grace≤2 s 等待期，仍是契约破损）；R3 残余：默认 hermes+stream_tts 下 300 字长答 + 两轮 tool 实测 80–101 s，90 s 仍会截断。
+- 修正：`4a0ede7` —— 该分支先判 `asyncio.current_task().cancelling()` 并 `raise`（只在"我们自己被取消"时重抛）；
+  `turn_timeout_s` 默认 **120 s**（clamp 5–300，覆盖 80–101 s 最坏正常态）；`b3ab887` 补回归测试
+  「等待 turn 收尾时不吞调用方取消」。测试 5 通过；全量 `-k "not barge"` 绿。
+- 已知残余（记录不修）：R2 `except TimeoutError` 也可能捕到 aiohttp `sock_read=45` 的超时（日志 wall 值可区分）；
+  R4 超时同时触发 `[proactive] queued task result`（预期）；`conversation.timeout_seconds: 30` 是死配置（src 无引用）。
+- 已重启部署（pid 88557，4410/4411 单实例）。**注意**：真机测试期间我重启过服务，若你当时正在对话，会话会被断开。
