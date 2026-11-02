@@ -770,3 +770,49 @@ bootloader/app checksum 与 validation hash 均 valid。
 - **误杀**：为清残留执行 `pkill -f osascript`，把 **Telegram 网关的启动包装器**（`hermes gateway run --external-supervisor`）一起杀了，
   8642 短暂离线；已 `launchctl kickstart -k ai.hermes.gateway` 恢复（新 PID 28617）。教训：杀进程必须按完整命令行匹配，
   不许用 `pkill -f osascript` 这种宽匹配。
+
+---
+
+## 2026-11-02 下午：本轮维护交接（14:3x，**以此节为准，覆盖上文 8643 隔离方案**）
+
+### 架构现状（与上文不同）
+- 现役 profile 是 `~/.hermes/profiles/esp32`（不是 `~/.hermes-esp32`），网关就是 `ai.hermes.gateway`，监听 **127.0.0.1:8642**。
+  `config.local.yaml` 的 `llm.hermes.base_url` 已改回 **8642**（原文写 8643，那个端口上没有任何进程，每轮都
+  `ClientConnectorError`）。
+- 密钥：语音服务 `src/llm.py` 优先读 `HERMES_API_KEY`，网关认 `API_SERVER_KEY`。两者不等会 401。
+  已把 `~/.hermes/.env` 的 `HERMES_API_KEY` 对齐成 `API_SERVER_KEY` 同一个值（48 位）。
+- 服务重启（**杀两个进程**，只杀外壳会 `port 4410 already in use`）：
+  `pkill -f "Esp32VoiceService.app/Contents/MacOS"; for p in $(lsof -nP -iTCP:4410 -sTCP:LISTEN -t); do kill $p; done; sleep 4; open -a /Applications/Esp32VoiceService.app`
+- 网关重启 agent 干不了（守卫拦自杀式重启，cron 里也会被拦），只能在终端由人工执行 `hermes gateway restart`。
+
+### 微信发送：老的 wechat-send / AX 判据全部作废
+- **微信已升到 4.1.13，不再暴露窗口内部结构**：`window "微信"` 的 UI elements 只剩关闭/全屏/最小化三个按钮，
+  读不到搜索框、聊天列表、输入框。旧技能依赖的「输入框 AX title = 联系人」「搜索框回读」全部失效。
+- 现在走**纯键盘 + 剪贴板**的确定性脚本，变量只有两个：收件人、正文。
+  - `src/wechat_send.py`：`send_message(who, body)`，被 `src/session.py` 在进 LLM 之前拦下
+    （`wechat_send.wants_send(text)`），这类请求根本不进 agent 循环。
+  - `scripts/wechat-prepare.applescript`（步骤 1~5）、`scripts/wechat-send-key.applescript`（步骤 6）。
+  - 步骤：`open -b com.tencent.xinWeChat` → `⌘F` → `⌘A`+Delete → 粘收件人 → 回车 → Esc → `⌘A`+Delete →
+    粘正文 → `⌘A ⌘C` 回读必须等于正文 → 回车 → 点聊天区 `⌘A ⌘C` 回读必须包含正文。
+  - 实测 **19 秒/条**（`大哥`、`一只小柠檬` 各验过）；skill `apple/wechat-desktop-messaging` 已重写为 55 行纯步骤版。
+- **已知限制**：微信 4.x 无法校验"打开的是不是这个人"，只能靠搜索框粘的是用户原话。
+  不许改写/补全收件人名。
+- 踩过的坑（都已修）：搜索框不清空会叠成「大哥大哥」；输入框 AX value 有延迟且元素引用会失效；
+  `⌘F` 之前若开着搜一搜面板，焦点落在一个读不到 AX 的窗口；发完"输入框变空"不是可靠信号，必须回读会话正文。
+
+### 长任务：板子等不了，任务也不许被砍
+- `session.py`：`route == "agent"` 且 provider 为 hermes 时，超过 `agent_ack_delay_s`（默认 6s）还没开口先说
+  `agent_ack`（"我去办，办完跟你说一声"）；工作在 `asyncio.shield` 的独立 task 里跑，轮次超时只结束这一轮、
+  不取消任务；做完若没人听，走 `proactive.note_pending_task` 播报。
+- 新增顶层 import 要同步加进 `tests/test_confirm.py` 的 `EXPECTED_SESSION_TOP_LEVEL_IMPORTS` 白名单。
+
+### 辅助模型
+- `auxiliary.vision` 已从本地 omlx 改成 **deepseek / deepseek-flash**（DeepSeek 现在支持图片输入）。
+  只能 `hermes config set` 改，直接改 `config.yaml` 会被安全策略拒；改完不用重启网关。
+- 注意：微信这条链路**不用视觉**，别再让 agent 去截图比对了。
+
+### 待办
+1. 语音链路真机复测：说「给 X 发微信说 Y」，看 `[wechat] prepare` / `after-send yes` 两行。
+2. Esp32VoiceService 的辅助功能权限：已由 9哥 手动授予，重启后端到端可用。
+3. 固件侧（persona.7 发布、冷启动循环确认）本轮未动，仍按上文 11:1x 那节执行。
+4. `conversation.timeout_seconds: 30` 仍是死配置，可清理。

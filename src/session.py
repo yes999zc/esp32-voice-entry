@@ -17,6 +17,7 @@ import numpy as np
 import persona
 import protocol
 import proactive
+import wechat_send
 from dialogue import classify_confirm
 from llm import Llm
 import tools as devtools
@@ -304,6 +305,10 @@ def speech_text(reply: str) -> str:
     text = re.sub(r"(?m)^\s*[#>\-*]\s+", "", text)
     return " ".join(text.split())
 
+
+# Long turns that must outlive the board's turn timeout (see _run_turn).
+# Holding a reference keeps asyncio from garbage-collecting them.
+_BG_TURNS: set = set()
 
 _MEDIA_RE = re.compile(r"(?m)^\s*MEDIA:\s*(\S+)\s*$")
 
@@ -1437,6 +1442,84 @@ class Session:
             except Exception as exc:
                 self.log("[media] failed", url, type(exc).__name__)
 
+    async def _wechat_vip(self, t0: float, text: str) -> None:
+        """「给X发微信说Y」的 VIP 通道：纯键盘，不经过 agent、不截图判断。
+
+        板子只等一百多秒，agent 那条路要十几秒才开口；这条路实测几秒发完，
+        判据全走 AX（输入框归属名、搜索框回读、发后输入框清空）。
+        """
+        who, body = wechat_send.parse_request(text)
+        if not who:
+            await self._say_text(t0, "要发给谁？我没听出人名。")
+            return
+        t_send = time.perf_counter()
+        try:
+            res = await wechat_send.send_message(who, body, log=self.log)
+            if not res.get("ok") and res.get("stage") in ("search_miss", "wrong_chat"):
+                # 微信窗口偶尔不在（面板态/刚被关），重来一次就正常
+                self.log("[wechat] retry after", res.get("stage"))
+                await asyncio.sleep(1.0)
+                res = await wechat_send.send_message(who, body, log=self.log)
+        except Exception as exc:                      # noqa: BLE001
+            self.log("[wechat] failed", type(exc).__name__, str(exc)[:160])
+            await self._say_text(t0, "微信没发出去，操作失败了。")
+            return
+        took = round(time.perf_counter() - t_send, 2)
+        self.log("[wechat] result", res.get("stage"), res.get("chat"), took, "s")
+        if not res.get("ok"):
+            if res.get("stage") == "wrong_chat":
+                landing = res.get("chat") or "别的对话"
+                await self._say_text(t0, f"没对上人，我先没发，当前开着的是{landing}。")
+            else:
+                await self._say_text(t0, "消息没发成功，回头我再看。")
+            return
+        await self._show_media(await self._wechat_shot())
+        await self._say_text(t0, f"发好了，给{who}发了「{body}」。")
+
+    async def _wechat_shot(self) -> list[str]:
+        """发完给板子屏的凭证图：只截微信窗口，不发整屏。"""
+        path = f"/tmp/wechat-{uuid.uuid4().hex[:8]}.png"
+        try:
+            script = ('tell application "System Events" to tell process "WeChat" to '
+                      'get {position, size} of window 1')
+            out = subprocess.run(["/usr/bin/osascript", "-e", script],
+                                 capture_output=True, text=True, timeout=10).stdout.strip()
+            nums = [int(x) for x in re.findall(r"-?\d+", out)]
+            x, y, w, h = nums[0], nums[1], nums[2], nums[3]
+            scale = self._display_scale()
+            full = "/tmp/_wx_full.png"
+            subprocess.run(["screencapture", "-x", full], check=True, timeout=15)
+            subprocess.run(["magick", full, "-crop",
+                            f"{int(w * scale)}x{int(h * scale)}+{int(x * scale)}+{int(y * scale)}",
+                            "+repage", path], check=True, timeout=25)
+            return [path]
+        except Exception as exc:                      # noqa: BLE001
+            self.log("[wechat] shot failed", type(exc).__name__)
+            return []
+
+    def _display_scale(self) -> float:
+        """Retina 截图是逻辑坐标的两倍，按整屏像素/点数算出来，不写死。"""
+        cached = getattr(self, "_dp_scale", None)
+        if cached:
+            return cached
+        scale = 2.0
+        try:
+            script = 'tell application "Finder" to get bounds of window of desktop'
+            out = subprocess.run(["/usr/bin/osascript", "-e", script],
+                                 capture_output=True, text=True, timeout=8).stdout
+            logical_w = max(int(x) for x in re.findall(r"\d+", out))
+            tmp = "/tmp/_scale_probe.png"
+            subprocess.run(["screencapture", "-x", tmp], check=True, timeout=15)
+            info = subprocess.run(["sips", "-g", "pixelWidth", tmp],
+                                  capture_output=True, text=True, timeout=10).stdout
+            px_w = int(re.search(r"pixelWidth:\s*(\d+)", info).group(1))
+            if logical_w:
+                scale = round(px_w / logical_w) or 1
+        except Exception:                             # noqa: BLE001
+            pass
+        self._dp_scale = float(scale)
+        return self._dp_scale
+
     async def _run_turn(self, t0: float, text: str):
         # Deterministic screen self-view: the Hermes model often answers
         # "截好了" without calling the tool, so handle the explicit ask here.
@@ -1477,6 +1560,9 @@ class Session:
             else:
                 await self._say_text(t0, "截屏没成功，稍后再试。")
             return
+        if wechat_send.wants_send(text):
+            await self._wechat_vip(t0, text)
+            return
         messages: list[dict] = [{"role": "system", "content": self._system_prompt()}]
         messages += self.history[-self.cfg["llm"]["history_rounds"] * 2:]
         messages.append({"role": "user", "content": text})
@@ -1503,39 +1589,85 @@ class Session:
         route = self._route(text)
         llm = self.fast_llm if route == "fast" else self.llm
         try:
-            self.log("[route]", route, llm.provider, llm.model)
-            stream = should_stream_sentences(
-                bool(self.cfg["llm"].get("stream_tts", False)), llm.provider, route)
-            for round_i in range(self.max_tool_rounds + 1):
-                use_tools = specs if round_i < self.max_tool_rounds else None
-                turn = await llm.chat(messages, self.session_id,
-                                      tools=use_tools if route != "fast" else None,
-                                      on_sentence=speak_sentence if stream else None)
-                if not turn.tool_calls:
-                    reply_text = turn.content
-                    self.log("[llm]", round(turn.latency, 2), "s",
-                             reply_text[:60] if reply_text else "(empty)")
-                    break
-                self.log("[llm] tool_calls", round(turn.latency, 2), "s",
-                         [c["name"] for c in turn.tool_calls])
-                messages.append({
-                    "role": "assistant",
-                    "content": turn.content or None,
-                    "tool_calls": [{
-                        "id": c["id"], "type": "function",
-                        "function": {"name": c["name"],
-                                     "arguments": json.dumps(c["arguments"],
-                                                             ensure_ascii=False)},
-                    } for c in turn.tool_calls],
-                })
-                for call in turn.tool_calls:
-                    t_call = time.perf_counter()
-                    result = await self.call_device_tool(call["name"], call["arguments"])
-                    self.log("[tool]", call["name"],
-                             round(time.perf_counter() - t_call, 2), "s",
-                             result[:120])
-                    messages.append({"role": "tool", "tool_call_id": call["id"],
-                                     "content": result})
+            async def run_llm_loop():
+                """Full conversation, tool rounds included; fills nonlocal reply_text."""
+                nonlocal reply_text
+                self.log("[route]", route, llm.provider, llm.model)
+                stream = should_stream_sentences(
+                    bool(self.cfg["llm"].get("stream_tts", False)), llm.provider, route)
+                for round_i in range(self.max_tool_rounds + 1):
+                    use_tools = specs if round_i < self.max_tool_rounds else None
+                    turn = await llm.chat(messages, self.session_id,
+                                          tools=use_tools if route != "fast" else None,
+                                          on_sentence=speak_sentence if stream else None)
+                    if not turn.tool_calls:
+                        reply_text = turn.content
+                        self.log("[llm]", round(turn.latency, 2), "s",
+                                 reply_text[:60] if reply_text else "(empty)")
+                        break
+                    self.log("[llm] tool_calls", round(turn.latency, 2), "s",
+                             [c["name"] for c in turn.tool_calls])
+                    messages.append({
+                        "role": "assistant",
+                        "content": turn.content or None,
+                        "tool_calls": [{
+                            "id": c["id"], "type": "function",
+                            "function": {"name": c["name"],
+                                         "arguments": json.dumps(c["arguments"],
+                                                                 ensure_ascii=False)},
+                        } for c in turn.tool_calls],
+                    })
+                    for call in turn.tool_calls:
+                        t_call = time.perf_counter()
+                        result = await self.call_device_tool(call["name"], call["arguments"])
+                        self.log("[tool]", call["name"],
+                                 round(time.perf_counter() - t_call, 2), "s",
+                                 result[:120])
+                        messages.append({"role": "tool", "tool_call_id": call["id"],
+                                         "content": result})
+            ack_delay = float(self.cfg["llm"].get("agent_ack_delay_s", 6.0))
+            ack_text = str(self.cfg["llm"].get("agent_ack", "") or "").strip()
+            detach = route == "agent" and llm.provider == "hermes"
+            if detach:
+                # The board only waits turn_timeout_s. Long GUI tasks (open
+                # WeChat, drive another app) blow through it, so the work has to
+                # outlive the turn: run it detached, announce the result later.
+                task = asyncio.create_task(run_llm_loop())
+                _BG_TURNS.add(task)
+                task.add_done_callback(_BG_TURNS.discard)
+                if ack_text and ack_delay >= 0:
+                    async def _ack_if_slow():
+                        await asyncio.sleep(ack_delay)
+                        if task.done() or spoken:
+                            return
+                        self.log("[turn] slow, acking", round(ack_delay, 1), "s")
+                        try:
+                            await self._say_text(t0, ack_text)
+                        except Exception as exc:        # noqa: BLE001
+                            self.log("[turn] ack failed", type(exc).__name__)
+                    ack_task = asyncio.create_task(_ack_if_slow())
+                    _BG_TURNS.add(ack_task)
+                    task.add_done_callback(lambda _t, a=ack_task: a.cancel())
+                    ack_task.add_done_callback(_BG_TURNS.discard)
+                try:
+                    await asyncio.shield(task)
+                except asyncio.CancelledError:
+                    # Turn timed out / socket died: keep the task, deliver later.
+                    async def _deliver_later():
+                        try:
+                            await task
+                        except Exception as exc:        # noqa: BLE001
+                            self.log("[turn] bg error", type(exc).__name__)
+                            return
+                        if reply_text:
+                            proactive.note_pending_task(reply_text, turn_id)
+                            self.log("[proactive] bg task result queued turn=" + turn_id)
+                    late = asyncio.create_task(_deliver_later())
+                    _BG_TURNS.add(late)
+                    late.add_done_callback(_BG_TURNS.discard)
+                    raise
+            else:
+                await run_llm_loop()
             if not reply_text:
                 self.log("[llm] empty reply")
                 return

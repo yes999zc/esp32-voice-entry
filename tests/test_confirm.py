@@ -272,7 +272,7 @@ EXPECTED_SESSION_TOP_LEVEL_IMPORTS = {
     "contextlib", "difflib", "json", "random", "re", "time", "unicodedata",
     "uuid", "pathlib", "shutil",
     "subprocess", "numpy", "protocol", "proactive", "persona", "dialogue", "llm",
-    "tools", "audio",
+    "tools", "audio", "wechat_send",
 }
 
 
