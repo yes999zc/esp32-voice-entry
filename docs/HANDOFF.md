@@ -524,3 +524,19 @@ bootloader/app checksum 与 validation hash 均 valid。
 - 已提交推送 `cfe1f87`（README + quickstart + HANDOFF，+347/−33）；privacy-scan run 40986502767 **success**。
   产物：README 中英双语「Getting started / 使用指导书」6 步 + 两张表（必填信息 7 项、三种刷法）；
   quickstart 全面换成 persona.5，并补齐 ASR/VAD/TTS 三套模型的下载命令（三条 URL 均实测 200）。
+
+## 2026-11-02 板子恢复 + 去 TF / BOOT 唤醒（进行中）
+
+- 现场：9哥 刷了别的固件后板子挂在 USB 上但 esptool 连不上（`0xEE` 噪声/无数据），需手动 BOOT+RST 进下载模式；
+  恢复材料已备：`02_Archive/esp32-firmware/persona5-20261030/merged-binary.bin`（`22a4d492…`，含真实 OTA 地址）
+  + `/tmp/nvs-restore.bin`（16 KB，`wifi/{ssid,password,ota_url}`，值取自 `~/.esp32-voice/provision.env`，不入库）。
+- 需求：① 重刷恢复；② 取消 TF 卡（`CHD_SD_ENABLE`/SD 冒烟测试），释放被 SD_CMD 占用的 IO0（BOOT strap）；
+  ③ BOOT 键改为唤醒键（触摸唤醒太费劲），长按保留恢复出厂。
+- 闸门：卡 1 = 固件（TF + BOOT），1 impl + 1 reviewer；刷机与真机按键验证由 Lead 在板子恢复后做。
+
+### 待办（2026-11-02 10:4x，等用户物理操作）
+- **阻塞点**：板子不进下载模式，esptool 报 `No serial data received` / `0xEE`。需要 9哥：按住 BOOT → 点一下 RST（或拔插 USB）
+  → 松开 BOOT；之后立刻 `python -m esptool --chip esp32s3 -p /dev/cu.usbmodem31406 -b 460800 flash-id` 复测。
+- 恢复序列（已备料）：`write-flash 0x0 persona5-20261030/merged-binary.bin`（`22a4d492…`）→ 立刻
+  `write-flash 0x9000 /tmp/nvs-restore.bin`（16 KB，wifi/{ssid,password,ota_url}）→ 等日志出现 `[ota] … -> ws://…` 与 `hello`。
+- 卡 1（impl 进行中，commit `ad75415f`）：去 TF/SD + BOOT 短按唤醒 / 长按 3s 恢复出厂；编过之后由 Lead 刷 app-only 验证按键。
