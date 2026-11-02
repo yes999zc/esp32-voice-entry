@@ -695,3 +695,17 @@ bootloader/app checksum 与 validation hash 均 valid。
 - 验证：8643 直连 `POST /v1/chat/completions` 返回「收到」；真机一轮 `[asr] 现在几点。` →
   `[tts] '当前时间是中午12点18分…'` 正常；**8642（Telegram 那条）全程未动**（PID 94445 仍在）。
 - 运维约定（写死）：以后只重启 `com.bakey.hermes-esp32`（或 kill 8643 的进程），**不再碰 8642**。
+
+### ESP32 专属 profile 的 SOUL 与技能（2026-11-02 12:2x）
+- **profile 位置**：`~/.hermes-esp32`（隐藏目录；数据根、`SOUL.md`、`skills/`、`.env` 都在这里）。
+  服务：`com.bakey.hermes-esp32`（8643）；主 profile `~/.hermes`（8642，Telegram）不受影响。
+- **SOUL.md**（已重写，备份 `SOUL.md.bak.<ts>`）：面向桌面语音终端——纯口语、无 Markdown/列表/emoji、
+  一次 2–3 句、数字用口语、先结论后细节；设备能力（音量/亮度/主题/截图/拍照/状态）；
+  对外动作（发消息/放音/删文件）先一句话确认收件人或对象；不念密钥/口令/完整路径；长任务先说一句再报结果。
+- **技能 1 `nas-music`**：`play.sh <关键词>` 通过 Navidrome/Subsonic (`search3` + `stream.view`) 取首条结果
+  用 `ffplay` 播放并回读标题；`stop.sh` 只杀自己起的播放器（pidfile + `pkill -x ffplay`）。
+  凭据走环境变量 `NAVIDROME_URL/USER/PASS`；已写入 URL(192.168.5.168:4533) 与 USER，**PASS 待 9哥 提供**。
+- **技能 2 `wechat-send`**：`send.sh <contact> <message>` 打开微信→⌘F 搜索→**校验窗口标题包含联系人**，
+  不匹配即 `abort: title mismatch` 中止（防发错人）→输入并回车；SKILL.md 要求收件人不明确时先问一句。
+- 已 `launchctl kickstart -k com.bakey.hermes-esp32` 重载，`hermes skills list` 确认两个技能 **enabled**。
+- 待验：真机语音「播放 后座」/「给一只小柠檬发你好」（需 NAS 密码 + 微信自动化权限）。
