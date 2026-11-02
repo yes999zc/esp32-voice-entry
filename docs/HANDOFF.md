@@ -600,3 +600,12 @@ bootloader/app checksum 与 validation hash 均 valid。
 - 暴露内容仅内网 IP（无 SSID/口令/MAC/token），窗口约 20 分钟；未改写历史（遵守"禁 force push"）。
 - 教训：写 HANDOFF/文档时**任何**真实地址一律先用占位符，写完立刻 `git grep -nE '192\.168\.'` 自查再提交。
 - 当前仓库自查：`git grep -nE '192\.168\.'` 只剩 `docs/step5-firmware-independence.md:121` 的描述性命令文本（`grep 192.168.`），不是地址。
+
+### 2026-11-02 11:3x 现场：短时重启循环 → 「检查新版本失败」
+- 现象：设备连续重启（串口 5 s 内 3 次 `app_init: App version`），每次都在触摸初始化处
+  `ESP_ERROR_CHECK failed: esp_err_t 0x108 (ESP_ERR_INVALID_RESPONSE)`（FT5x06 I2C 读失败）→ abort → 重启；
+  OTA 检查来不及完成，屏幕提示「检查新版本失败」。
+- 约 30–60 s 后自行恢复：当前 uptime 47 s+、触摸心跳与按下事件正常、服务端 `[ota] … -> ws://…` 与 `[conn]` 正常。
+  推断诱因：拔 TF 卡/断电时的电源或 I2C 瞬态（非固件逻辑），非永久故障。
+- 待改进（建议开卡）：触摸初始化用 `ESP_ERROR_CHECK` 会在瞬态 I2C 错误时 abort → 重启循环；
+  应改为「记录日志 + 继续启动（触摸不可用但设备可用）」，避免一次瞬态把设备拖进循环。
