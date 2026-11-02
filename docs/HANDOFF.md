@@ -662,7 +662,10 @@ bootloader/app checksum 与 validation hash 均 valid。
 - persona.7 产物与 SHA256SUMS 已备在 `/tmp/release-p7/`：
   app `47d4d4a53cfeceafc7aab3abb20dd0a86d4d64d6e4da340574fa486d2d3ea973`（2,864,688 B）、
   merged `d36199d274540d91a43c3308553a8493b43ba10406bddb1fde4d8aee0269183d`（10,164,189 B）；app 段 cmp exit 0。
-- **待确认**：9哥 拨 ON 开关冷启动后是否还循环；确认后发 `v2.5.3-persona.7` 并回填 release URL。
+- **已确认并发布（2026-11-02 14:4x）**：9哥 拨 ON 冷启动后不再重启循环。
+  tag `v2.5.3-persona.7` → https://github.com/yes999zc/xiaozhi-esp32/releases/tag/v2.5.3-persona.7
+  （pre-release；资产 `xiaozhi.bin` `47d4d4a5…` / `merged-binary.bin` `d36199d2…` / `SHA256SUMS.txt`，
+  上传后 digest 与本地逐项一致；镜像里只有占位地址 `rui-ota.invalid`，无内网地址/口令/MAC）。
 
 ## 2026-11-02 11:2x 事故：板子断电后后台 agent 仍在执行（架构性）
 
