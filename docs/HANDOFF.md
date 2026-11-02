@@ -574,3 +574,9 @@ bootloader/app checksum 与 validation hash 均 valid。
 - 待办（下轮）：① 新 reviewer 对 `b7b2af83` 增量确认 PASS；② 四项校验（sha/offset/app 段 cmp/`image_info`）；
   ③ tag `v2.5.3-persona.6` + merged/app/SHA256SUMS；④ 刷 app-only `0x20000`（设备现为 `usbmodem31301`）；
   ⑤ 用户按 BOOT 验证短按起一轮；⑥ HANDOFF 回填 + privacy-scan。
+- **四项校验已在 `b7b2af83` 的产物上跑完**（`/tmp/release-p6/`，含 SHA256SUMS.txt）：
+  app `f1c208631097070d174488ef…`（2,858,800 B）、merged `6e8441024442692db31550d3…`（10,164,189 B）；
+  `dd+app-cmp` exit 0；分区表 `nvs 0x9000/16K、otadata 0xd000/8K、phy_init 0xf000/4K、ota_0 0x20000/4032K、
+  ota_1 0x410000/4032K、assets 0x800000/8M`；`image_info` ESP32-S3、checksum `0x11` valid;
+  隐私：`192.168.5.27`=0、`${XIAOZHI_OTA_BASE}`=0、`rui-ota.invalid`=1（app 与 merged 各一次）。
+  → 下轮只需：新 reviewer 增量 PASS → tag/release/上传 → 刷 app-only 0x20000 → 用户按 BOOT。
