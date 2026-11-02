@@ -555,3 +555,13 @@ bootloader/app checksum 与 validation hash 均 valid。
 - README 同步四处：§触摸交互 :70-80、§TF 卡冒烟测试 :153-205、§按键说明 :313、§常见问题 :325-330（5 次连按 → 长按 3 s）。
 - 验收：`build.py chd/chd-esp32s3-box --name chd-esp32s3-box-lcd35 --language zh-CN` exit 0 + grep 归零；
   真机：短按 BOOT 起一轮对话、长按 3 s 恢复出厂（Lead 刷 app-only 后验）。
+
+### 2026-11-02 10:5x 板子恢复进展（压缩前存档）
+- 根因：9哥 刷了别的固件后板子不进下载模式；换回原来的 USB 口后 `usbmodem31301` 可连（ESP32-S3，MAC `80:b5:4e:cd:0f:64`）。
+- 已执行：`write-flash 0x0 persona5-20261030/merged-binary.bin`（`22a4d492…`，Hash verified）→
+  `write-flash 0x9000 /tmp/nvs-restore.bin`（16 KB，`wifi/{ssid,password,ota_url}`，Hash verified）。
+- 服务：4411 曾被 `cairn.voice.xiaozhi`（PID 64251，跑了 1d18h）占用，经 9哥 同意已停；现在我们的服务
+  PID 9923 正常监听 4410/4411（`[ready]`）。
+- **卡在最后一步**：板子仍在下载模式（串口 0 字节、esptool 能连）→ 需要 9哥 **松开 BOOT + 点一下 RST**，
+  之后应看到 `[ota] xiaozhi v2.5.3 -> ws://192.168.5.27:4410` 与 `hello`。
+- 之后再做卡 1（去 TF + BOOT 唤醒），方案见上一节。
