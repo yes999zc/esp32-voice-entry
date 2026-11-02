@@ -136,15 +136,17 @@ def _turn_timeout_from_cfg(cfg: dict) -> float:
 
     card task-1: on 2026-11-02 a disconnected board left an agent turn running
     server-side because nothing bounded how long a call to the upstream model
-    could take. 30 s is above the slowest real answer measured on this board
-    (~13 s) and low enough that a hung upstream is noticed.
+    could take. The ceiling covers the WHOLE turn, TTS playback included, and
+    ``conversation.max_reply_chars`` allows a 300-character answer whose audio
+    runs 45-60 s - a 30 s ceiling would cut those off mid-sentence. 90 s is
+    above that playback time and still short enough to notice a hung upstream.
     """
-    raw = (cfg.get("session") or {}).get("turn_timeout_s", 30)
+    raw = (cfg.get("session") or {}).get("turn_timeout_s", 90)
     try:
         value = float(raw)
     except (TypeError, ValueError):
-        value = 30.0
-    return min(120.0, max(5.0, value))
+        value = 90.0
+    return min(300.0, max(5.0, value))
 
 
 def strip_wake(text: str) -> str:
@@ -1002,7 +1004,7 @@ class Session:
         instead of being reported as a normal answer.
         """
         try:
-            ceiling = getattr(self, "turn_timeout_s", 30.0)
+            ceiling = getattr(self, "turn_timeout_s", 90.0)
             async with asyncio.timeout(ceiling):
                 await awaitable
             return True
@@ -1033,8 +1035,18 @@ class Session:
         if task is None or task.done():
             return
         task.cancel()
-        with contextlib.suppress(asyncio.CancelledError, TimeoutError, Exception):
+        try:
             await asyncio.wait_for(asyncio.shield(task), timeout=grace)
+        except asyncio.CancelledError:
+            # The turn task reports its own cancellation through shield; that is
+            # the expected outcome, not an error for the caller.
+            self.log("[turn] cancel wait ended (turn cancelled)")
+        except asyncio.TimeoutError:
+            # shield keeps the task alive past the grace window, so this is a
+            # "we stopped waiting", not "it stopped" - say so instead of hiding it.
+            self.log(f"[turn] cancel grace {grace:.0f}s expired, task still unwinding")
+        except Exception as exc:  # loop shutdown and friends
+            self.log("[turn] cancel wait failed", type(exc).__name__, exc)
 
     async def _interrupt(self):
         if self.turn and not self.turn.done():

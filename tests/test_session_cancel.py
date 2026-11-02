@@ -110,8 +110,8 @@ async def test_start_text_turn_refuses_while_a_turn_is_in_flight():
 
 
 def test_turn_timeout_is_clamped():
-    assert voice_session._turn_timeout_from_cfg({}) == 30.0
+    assert voice_session._turn_timeout_from_cfg({}) == 90.0
     assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": 0.1}}) == 5.0
-    assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": 999}}) == 120.0
+    assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": 999}}) == 300.0
     assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": "45"}}) == 45.0
-    assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": "bad"}}) == 30.0
+    assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": "bad"}}) == 90.0

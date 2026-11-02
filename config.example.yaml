@@ -114,9 +114,10 @@ llm:
 session:
   # Hard ceiling (seconds) for one turn: LLM + device tools + TTS. A disconnected
   # board used to leave an agent turn running server-side with nothing bounding
-  # it (2026-11-02). 30 s is above the slowest real answer measured here (~13 s)
-  # and low enough that a hung upstream is visible. Clamped to 5-120.
-  turn_timeout_s: 30
+  # it (2026-11-02). The ceiling covers the whole turn including TTS playback,
+  # and max_reply_chars allows a 300-char answer whose audio runs 45-60 s, so 90 s
+  # leaves room for that while still noticing a hung upstream. Clamped to 5-300.
+  turn_timeout_s: 90
 
 conversation:
   timeout_seconds: 30
