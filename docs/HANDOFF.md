@@ -540,3 +540,18 @@ bootloader/app checksum 与 validation hash 均 valid。
 - 恢复序列（已备料）：`write-flash 0x0 persona5-20261030/merged-binary.bin`（`22a4d492…`）→ 立刻
   `write-flash 0x9000 /tmp/nvs-restore.bin`（16 KB，wifi/{ssid,password,ota_url}）→ 等日志出现 `[ota] … -> ws://…` 与 `hello`。
 - 卡 1（impl 进行中，commit `ad75415f`）：去 TF/SD + BOOT 短按唤醒 / 长按 3s 恢复出厂；编过之后由 Lead 刷 app-only 验证按键。
+
+### 卡 1 方案（impl 已定位、未落代码；压缩前存档，下轮直接执行）
+- SD/TF 只在这三处：`chd_esp32s3_box_board.cc:50-371`（整块冒烟测试 + `CHD_SD_ENABLE` 宏 :68-70）、
+  `:3964-3981`（MCP 工具 `self.debug.sd_storm`）、`:4012-4016`（`xTaskCreate(SdSmokeTask…)`）；三处删完
+  `grep -rn "CHD_SD|sd_storm|SdSmokeTask|sdmmc|esp_vfs_fat" main/` 应归零（README 另改）。
+- BOOT 键现状：板级**故意没有** `boot_button_`（:3279-3283 注释：IO0 与 SD_CMD 共用导致误触发）。
+  现成判据在 `HandleTap()`（:3350-3366）：`starting + WIFI + SSID 列表为空` → `EnterWifiConfigMode()`，
+  否则 `ToggleChatState()` + `power_save_timer_->WakeUp()`。
+- 接线：`Button boot_button_{GPIO_NUM_0, false, 3000, 0, false};`（`button.h:12`，第 3 参=长按 3000 ms），
+  `OnClick` 复用 HandleTap 的判据（抽公共方法），`OnLongPress` → 新 `FactoryResetFromBoot()`
+  （`nvs_flash_erase/init` + 擦 otadata + `esp_restart`；**不要实例化 `SystemReset`**，它会在 IO0 上
+  `GPIO_INTR_DISABLE`，把 iot_button 中断关掉）。
+- README 同步四处：§触摸交互 :70-80、§TF 卡冒烟测试 :153-205、§按键说明 :313、§常见问题 :325-330（5 次连按 → 长按 3 s）。
+- 验收：`build.py chd/chd-esp32s3-box --name chd-esp32s3-box-lcd35 --language zh-CN` exit 0 + grep 归零；
+  真机：短按 BOOT 起一轮对话、长按 3 s 恢复出厂（Lead 刷 app-only 后验）。
