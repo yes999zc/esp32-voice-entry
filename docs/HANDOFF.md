@@ -586,3 +586,10 @@ bootloader/app checksum 与 validation hash 均 valid。
   `SHA256SUMS.txt`（162 B）。说明无 IP/SSID/MAC/token（唯一 `192.168` 是 SoftAP 固定地址 `192.168.4.1`）。
 - **已刷 app-only `0x20000`**（`Hash of data verified`，NVS 未动）；静音已解除。
 - 待真机：用户短按 BOOT → 期望串口 `CHD_UI: BOOT -> …` + 日志 `[conn]`/`[asr]`/`[turn]`；长按 3 s 恢复出厂为可选项。
+
+### 隐私事故与修复（2026-11-02 11:0x，必须记住）
+- 我在 HANDOFF 里写了真实内网地址 `192.168.5.27`（3 处），privacy-scan 在 `cafedc9` 抓红；
+  已在 `c67a5ec` 全部替换为 `<server-ip>` 并 push，扫描恢复 success。
+- 暴露内容仅内网 IP（无 SSID/口令/MAC/token），窗口约 20 分钟；未改写历史（遵守"禁 force push"）。
+- 教训：写 HANDOFF/文档时**任何**真实地址一律先用占位符，写完立刻 `git grep -nE '192\.168\.'` 自查再提交。
+- 当前仓库自查：`git grep -nE '192\.168\.'` 只剩 `docs/step5-firmware-independence.md:121` 的描述性命令文本（`grep 192.168.`），不是地址。
