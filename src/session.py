@@ -141,11 +141,11 @@ def _turn_timeout_from_cfg(cfg: dict) -> float:
     runs 45-60 s - a 30 s ceiling would cut those off mid-sentence. 90 s is
     above that playback time and still short enough to notice a hung upstream.
     """
-    raw = (cfg.get("session") or {}).get("turn_timeout_s", 90)
+    raw = (cfg.get("session") or {}).get("turn_timeout_s", 120)
     try:
         value = float(raw)
     except (TypeError, ValueError):
-        value = 90.0
+        value = 120.0
     return min(300.0, max(5.0, value))
 
 
@@ -1004,7 +1004,7 @@ class Session:
         instead of being reported as a normal answer.
         """
         try:
-            ceiling = getattr(self, "turn_timeout_s", 90.0)
+            ceiling = getattr(self, "turn_timeout_s", 120.0)
             async with asyncio.timeout(ceiling):
                 await awaitable
             return True
@@ -1038,8 +1038,13 @@ class Session:
         try:
             await asyncio.wait_for(asyncio.shield(task), timeout=grace)
         except asyncio.CancelledError:
-            # The turn task reports its own cancellation through shield; that is
-            # the expected outcome, not an error for the caller.
+            # Two sources look identical here: the turn task's own cancellation
+            # (expected, shield surfaces it) and *our* task being cancelled while
+            # we wait. Only the second must propagate, or run() would report a
+            # clean close after the server asked it to stop.
+            me = asyncio.current_task()
+            if me is not None and me.cancelling():
+                raise
             self.log("[turn] cancel wait ended (turn cancelled)")
         except asyncio.TimeoutError:
             # shield keeps the task alive past the grace window, so this is a
