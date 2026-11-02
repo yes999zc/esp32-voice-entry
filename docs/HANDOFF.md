@@ -580,3 +580,9 @@ bootloader/app checksum 与 validation hash 均 valid。
   ota_1 0x410000/4032K、assets 0x800000/8M`；`image_info` ESP32-S3、checksum `0x11` valid;
   隐私：`192.168.5.27`=0、`${XIAOZHI_OTA_BASE}`=0、`rui-ota.invalid`=1（app 与 merged 各一次）。
   → 下轮只需：新 reviewer 增量 PASS → tag/release/上传 → 刷 app-only 0x20000 → 用户按 BOOT。
+- **已发布**：reviewer 对 `b7b2af83` 增量 **PASS**（无阻塞）→ tag `v2.5.3-persona.6`（指向 `b7b2af83`）
+  → https://github.com/yes999zc/xiaozhi-esp32/releases/tag/v2.5.3-persona.6
+  资产 digest 与本地一致：merged `6e844102…b0e725`（10,164,189 B）、app `f1c20863…0fe3617`（2,858,800 B）、
+  `SHA256SUMS.txt`（162 B）。说明无 IP/SSID/MAC/token（唯一 `192.168` 是 SoftAP 固定地址 `192.168.4.1`）。
+- **已刷 app-only `0x20000`**（`Hash of data verified`，NVS 未动）；静音已解除。
+- 待真机：用户短按 BOOT → 期望串口 `CHD_UI: BOOT -> …` + 日志 `[conn]`/`[asr]`/`[turn]`；长按 3 s 恢复出厂为可选项。
