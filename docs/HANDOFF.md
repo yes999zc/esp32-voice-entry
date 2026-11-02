@@ -661,3 +661,15 @@ bootloader/app checksum 与 validation hash 均 valid。
 - 已知残余（记录不修）：R2 `except TimeoutError` 也可能捕到 aiohttp `sock_read=45` 的超时（日志 wall 值可区分）；
   R4 超时同时触发 `[proactive] queued task result`（预期）；`conversation.timeout_seconds: 30` 是死配置（src 无引用）。
 - 已重启部署（pid 88557，4410/4411 单实例）。**注意**：真机测试期间我重启过服务，若你当时正在对话，会话会被断开。
+
+### 2026-11-02 12:1x 事故：Mac 侧音乐播放停不下来 + 误重启共享网关
+
+- 现象：9哥 听到"ESP32 在放歌"，连续说"停止播放"无效（LLM 答"我没有控制播放音乐的能力"）。
+- 真相：歌在 **Mac** 上放，不是设备。链：agent 生成的 `/tmp/jay-play.sh`（周杰伦播放列表循环器，7 分钟前创建）
+  → 逐首 `ffplay` 从 NAS 音乐服务拉流（`<nas>:4533/rest/stream.view`）。我方语音链路只能控制设备侧（音量/屏幕/拍照），
+  杀不掉 Mac 进程；启动它的那一轮 agent 已结束，后续轮次没有该上下文与工具 → "小智停不了"。
+- 处置：`kill` 掉 `jay-play.sh` + 全部 `ffplay`（5 s 后复查无残留）；紧急时用 MCP `self.audio_speaker.set_volume(0)` 静音设备，
+  事后已恢复 85。
+- **我的失误**：为清死锁重启了 `127.0.0.1:8642` 的 Hermes 网关，而那是**共享网关**（Telegram 也在用），导致 9哥 Telegram 侧中断。
+- 待决策（隔离方案）：给 esp32 单独起一个 Hermes gateway（独立端口 + 独立 profile），把 `llm.hermes.base_url` 指过去，
+  以后运维只动 esp32 那条；或约定"永不重启网关"，只靠 120 s 超时 + 请求级取消。
