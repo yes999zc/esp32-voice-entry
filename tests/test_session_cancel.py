@@ -115,3 +115,40 @@ def test_turn_timeout_is_clamped():
     assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": 999}}) == 300.0
     assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": "45"}}) == 45.0
     assert voice_session._turn_timeout_from_cfg({"session": {"turn_timeout_s": "bad"}}) == 120.0
+
+
+async def test_cancel_turn_does_not_swallow_the_callers_cancellation():
+    """B1 (review of 6fc6262): waiting for the turn must not eat our own cancel.
+
+    When the server tears the session down, the cancellation can land on the
+    `await` inside `_cancel_turn`. That branch also sees the turn task's own
+    CancelledError, so it has to tell the two apart - otherwise `run()` reports
+    a clean close after being told to stop.
+    """
+    sess = _bare_session()
+
+    async def slow_unwind():
+        # Ignore the first cancel for a moment so the waiter is still parked in
+        # `wait_for(shield(...))` when *its* cancellation arrives.
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            await asyncio.sleep(0.5)
+            raise
+
+    inner = asyncio.ensure_future(slow_unwind())
+    sess.turn = inner
+
+    async def waiter():
+        await sess._cancel_turn(grace=2.0)
+
+    outer = asyncio.ensure_future(waiter())
+    await asyncio.sleep(0.05)
+    outer.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await outer
+    inner.cancel()
+    try:
+        await inner
+    except asyncio.CancelledError:
+        pass
