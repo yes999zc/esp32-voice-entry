@@ -565,3 +565,12 @@ bootloader/app checksum 与 validation hash 均 valid。
 - **卡在最后一步**：板子仍在下载模式（串口 0 字节、esptool 能连）→ 需要 9哥 **松开 BOOT + 点一下 RST**，
   之后应看到 `[ota] xiaozhi v2.5.3 -> ws://192.168.5.27:4410` 与 `hello`。
 - 之后再做卡 1（去 TF + BOOT 唤醒），方案见上一节。
+
+### 卡 1 返工 + 发布准备（2026-11-02 11:0x）
+- 固件 `e1e6f529`（去 TF + BOOT 短按/长按）→ reviewer **CHANGES**（代码通过，README 两处旧文案）→ 我按一轮返工修复并重编：
+  `b7b2af83`（板级 README 去掉 `sd_storm`/双击 AEC 旧说法；`FactoryResetFromBoot` 检查 `esp_partition_erase_range` 返回值）。
+- 返工后构建 exit 0：`build/xiaozhi.bin` **2,858,800 B**、`merged-binary.bin` 10,164,189 B；占位地址构建
+  （`CONFIG_OTA_URL=http://rui-ota.invalid:4411/xiaozhi/ota/`），`strings`：`192.168.5.27`=0、`${XIAOZHI_OTA_BASE}`=0、`rui-ota.invalid`=1。
+- 待办（下轮）：① 新 reviewer 对 `b7b2af83` 增量确认 PASS；② 四项校验（sha/offset/app 段 cmp/`image_info`）；
+  ③ tag `v2.5.3-persona.6` + merged/app/SHA256SUMS；④ 刷 app-only `0x20000`（设备现为 `usbmodem31301`）；
+  ⑤ 用户按 BOOT 验证短按起一轮；⑥ HANDOFF 回填 + privacy-scan。
