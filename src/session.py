@@ -1,5 +1,6 @@
 """Per-connection pipeline: hello -> VAD -> ASR -> LLM -> TTS -> Opus frames."""
 import asyncio
+import contextlib
 import difflib
 import json
 import random
@@ -128,6 +129,22 @@ WAKE_WORDS = (
 )
 _LEAD_PUNCT = "，,。.！!？?、 \t\n"
 _URL_RE = re.compile(r"https?://\S+")
+
+
+def _turn_timeout_from_cfg(cfg: dict) -> float:
+    """Hard ceiling (seconds) for one turn; clamped to a sane range.
+
+    card task-1: on 2026-11-02 a disconnected board left an agent turn running
+    server-side because nothing bounded how long a call to the upstream model
+    could take. 30 s is above the slowest real answer measured on this board
+    (~13 s) and low enough that a hung upstream is noticed.
+    """
+    raw = (cfg.get("session") or {}).get("turn_timeout_s", 30)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        value = 30.0
+    return min(120.0, max(5.0, value))
 
 
 def strip_wake(text: str) -> str:
@@ -483,6 +500,8 @@ class Session:
         self._mcp_id = 10
         self._pending: dict[int, asyncio.Future] = {}
         self.max_tool_rounds = int(self.cfg["llm"].get("max_tool_rounds", 2))
+        # Ceiling for one turn (LLM + device tools + TTS); see _guard_turn.
+        self.turn_timeout_s = _turn_timeout_from_cfg(self.cfg)
         self.enable_device_tools = bool(self.cfg["llm"].get("device_tools", True))
         self.log_prefix = f"[{self.session_id[:6]}]"
         _SESSIONS.add(self)
@@ -721,8 +740,7 @@ class Session:
         except Exception as exc:  # connection-level; keep the process alive
             self.log("connection error", type(exc).__name__, exc)
         finally:
-            if self.turn and not self.turn.done():
-                self.turn.cancel()
+            await self._cancel_turn()
             # A pending confirmation on a dead socket has nobody to ask: drop it
             # (cancels the 120 s timer and clears the proactive reminder) so no
             # timer/reminder outlives the connection.
@@ -975,6 +993,49 @@ class Session:
             self._barge_onset_at = None
         self.log("[listen] reset after mute")
 
+    async def _guard_turn(self, awaitable, t0: float | None = None) -> bool:
+        """Run one upstream turn under the hard ceiling.
+
+        Returns True when the turn finished on its own. On timeout the turn is
+        cancelled (the caller's task is already inside this coroutine, so the
+        timeout cancels it), playback is stopped and the failure is logged
+        instead of being reported as a normal answer.
+        """
+        try:
+            ceiling = getattr(self, "turn_timeout_s", 30.0)
+            async with asyncio.timeout(ceiling):
+                await awaitable
+            return True
+        except TimeoutError:
+            took = round(time.perf_counter() - t0, 2) if t0 is not None else None
+            self.log("[turn] timeout after", ceiling, "s", "(wall", took, "s)")
+            await self._abort_after_timeout()
+            return False
+
+    async def _abort_after_timeout(self) -> None:
+        """Leave the board in a clean state when a turn hits the ceiling."""
+        if self.speaking:
+            self.speaking = False
+            await self._safe_send(protocol.tts_stop(self.session_id))
+        self._reply_ready = False
+        self._kick_cue_restore("turn timeout")
+        self._finish_turn_face()
+        await self._push_state_face("idle")
+
+    async def _cancel_turn(self, grace: float = 2.0) -> None:
+        """Cancel the in-flight turn and wait for it to unwind.
+
+        The wait matters: cancelling a task only schedules the cancellation, so
+        without awaiting it the aiohttp connection to the upstream model could
+        stay open after the board disconnected (2026-11-02 incident).
+        """
+        task = self.turn
+        if task is None or task.done():
+            return
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError, TimeoutError, Exception):
+            await asyncio.wait_for(asyncio.shield(task), timeout=grace)
+
     async def _interrupt(self):
         if self.turn and not self.turn.done():
             self.turn.cancel()
@@ -1064,7 +1125,7 @@ class Session:
             # stays as a visual mask for a slow ASR, but `_filler_after` skips
             # itself once this state is already on screen.
             await self._push_state_face("thinking")
-            await self._run_turn(t0, text)
+            await self._guard_turn(self._run_turn(t0, text), t0)
         except asyncio.CancelledError:
             self.log("[turn] cancelled")
             raise
@@ -1103,7 +1164,7 @@ class Session:
                 await self._maybe_confirm_reminder(t, text)
                 # Bench text turn: ASR is simulated, thinking starts here.
                 await self._push_state_face("thinking")
-                await self._run_turn(t, text)
+                await self._guard_turn(self._run_turn(t, text), t)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:

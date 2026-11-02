@@ -268,7 +268,9 @@ def test_restatement_without_arguments_has_no_empty_parentheses():
 # top-level import in session.py must fail here and force a conscious decision
 # (a heavy module at module scope would break the real server and this suite).
 EXPECTED_SESSION_TOP_LEVEL_IMPORTS = {
-    "asyncio", "json", "random", "re", "time", "uuid", "pathlib", "shutil",
+    "asyncio",
+    "contextlib", "difflib", "json", "random", "re", "time", "unicodedata",
+    "uuid", "pathlib", "shutil",
     "subprocess", "numpy", "protocol", "proactive", "persona", "dialogue", "llm",
     "tools", "audio",
 }

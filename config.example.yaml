@@ -111,6 +111,13 @@ llm:
     按房间名匹配，再 ha_call_service switch.turn_off / switch.turn_on；儿童房优先查 light.*。
     不要因为 light 域里没找到某个房间的灯，就说只能关书房或只能关某个房间。
 
+session:
+  # Hard ceiling (seconds) for one turn: LLM + device tools + TTS. A disconnected
+  # board used to leave an agent turn running server-side with nothing bounding
+  # it (2026-11-02). 30 s is above the slowest real answer measured here (~13 s)
+  # and low enough that a hung upstream is visible. Clamped to 5-120.
+  turn_timeout_s: 30
+
 conversation:
   timeout_seconds: 30
   max_reply_chars: 300
