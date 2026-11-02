@@ -586,6 +586,8 @@ bootloader/app checksum 与 validation hash 均 valid。
   `SHA256SUMS.txt`（162 B）。说明无 IP/SSID/MAC/token（唯一 `192.168` 是 SoftAP 固定地址 `192.168.4.1`）。
 - **已刷 app-only `0x20000`**（`Hash of data verified`，NVS 未动）；静音已解除。
 - 待真机：用户短按 BOOT → 期望串口 `CHD_UI: BOOT -> …` + 日志 `[conn]`/`[asr]`/`[turn]`；长按 3 s 恢复出厂为可选项。
+- **静态证据（已核）**：刷入的 `xiaozhi.bin`（`f1c208631097070d…`）里含字符串 `BOOT long-press: factory reset`，
+  说明板上跑的确实是带 BOOT 处理的镜像；只差物理按键那一下。串口目前只有触摸心跳、无 BOOT 事件。
 
 ### 隐私事故与修复（2026-11-02 11:0x，必须记住）
 - 我在 HANDOFF 里写了真实内网地址 `192.168.5.27`（3 处），privacy-scan 在 `cafedc9` 抓红；
