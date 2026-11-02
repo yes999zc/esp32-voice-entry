@@ -626,3 +626,15 @@ bootloader/app checksum 与 validation hash 均 valid。
   app `47d4d4a53cfeceafc7aab3abb20dd0a86d4d64d6e4da340574fa486d2d3ea973`（2,864,688 B）、
   merged `d36199d274540d91a43c3308553a8493b43ba10406bddb1fde4d8aee0269183d`（10,164,189 B）；app 段 cmp exit 0。
 - **待确认**：9哥 拨 ON 开关冷启动后是否还循环；确认后发 `v2.5.3-persona.7` 并回填 release URL。
+
+## 2026-11-02 11:2x 事故：板子断电后后台 agent 仍在执行（架构性）
+
+- 现象：9哥 通过板子让 Hermes 执行操作 → 拔电重启后这些操作仍在继续（`terminal`/`write_file` 累计 114 次 API 调用、14 次写文件）。
+- 根因：设备只是 WS 客户端，真正的 agent 跑在 Mac 的 Hermes 网关。我们服务端断线只打 `[turn] cancelled`（本地取消），
+  **取消不了网关内部已启动的 agent 循环**；实测客户端 `TimeoutError` 后网关仍继续跑。
+- 操作记录：`hermes pause` 挡住新任务 → `hermes gateway restart --yes` 被"3 个活跃工作单元"挡住 → 强杀网关进程后，
+  会话从存档恢复继续执行。结论：Hermes 侧没有 turn 级取消入口（只有 `/api/cron/jobs/{id}/cancel`），
+  且设计上 "in-flight work is never killed"。已 `hermes resume` 恢复正常。
+- 处置：9哥 选 **A+C**——A：让在跑的清后台任务自己跑完（不硬杀，避免半清理）；C：单开卡 `task-1`
+  「设备断线即取消 + 单轮硬上限」，边界限定在我方可控范围（断线取消本地 turn、关闭上游流、25–30 s 硬超时、同会话不叠加上游请求），
+  Hermes 上游限制写进卡与文档。
