@@ -638,3 +638,16 @@ bootloader/app checksum 与 validation hash 均 valid。
 - 处置：9哥 选 **A+C**——A：让在跑的清后台任务自己跑完（不硬杀，避免半清理）；C：单开卡 `task-1`
   「设备断线即取消 + 单轮硬上限」，边界限定在我方可控范围（断线取消本地 turn、关闭上游流、25–30 s 硬超时、同会话不叠加上游请求），
   Hermes 上游限制写进卡与文档。
+
+### task-1 落地：断线取消 + 单轮上限（2026-11-02 11:3x）
+
+- `7628ac1`（impl）+ `6fc6262`（评审后修正）：`session.turn_timeout_s` 默认 **90 s**（clamp 5–300），
+  上限覆盖整轮含 TTS 播放（`max_reply_chars: 300` 的音频约 45–60 s，30 s 会截断长答 —— 评审 R3 发现并已修）；
+  `_cancel_turn()` 断线时 cancel + 等收尾（grace 2 s，超时打 `[turn] cancel grace … expired`，不再静默）；
+  同会话在飞时拒绝第二轮（`start_text_turn` 路径也覆盖）。
+- 测试：`tests/test_session_cancel.py` 4 用例 + 全量 `tests/ -q -k "not barge"` 绿（1985 passed 量级）。
+- 已部署：服务重启后 pid 84937、4410/4411 单实例；真机冒烟 `[asr] 背食。` → `[llm] 没听清，你是想让我背首诗吗？` → `[turn] done 3.55 s`。
+- **上游限制（不谎称已解决）**：Hermes 网关无 turn 级 cancel 接口，且设计上 "in-flight work is never killed"。
+  我方只能做到「立刻放手 + 关闭上游流 + 超时收口」；**网关内部已启动的 agent 循环仍会继续**（实测 11:19 断线后跑到 11:24:14 才自行结束）。
+  根治需要 Hermes 提供 cancel 接口，属上游需求。
+- 仍属 [未验证]：真机「长任务 → 立刻断电 → 无遗留动作」的端到端（需要一次会跑几分钟的 agent 任务 + 断电时机配合）。
