@@ -709,3 +709,11 @@ bootloader/app checksum 与 validation hash 均 valid。
   不匹配即 `abort: title mismatch` 中止（防发错人）→输入并回车；SKILL.md 要求收件人不明确时先问一句。
 - 已 `launchctl kickstart -k com.bakey.hermes-esp32` 重载，`hermes skills list` 确认两个技能 **enabled**。
 - 待验：真机语音「播放 后座」/「给一只小柠檬发你好」（需 NAS 密码 + 微信自动化权限）。
+
+### nas-music 技能实测（2026-11-02 12:3x）
+- 修了两个实现坑：macOS 没有 `/usr/bin/md5`（改 `/sbin/md5 -q`）；profile 的 `.env` 不是 shell-safe（含带空格的路径），
+  脚本改为**只解析 `NAVIDROME_*` 三行**，不再 `source .env`。
+- 凭据：`NAVIDROME_URL=<nas>:4533`、`USER=yes999zc`、`PASS` 已写入 `~/.hermes-esp32/.env`（600，未入仓、未回显）。
+- 结果：`search3` + `stream.view` + `ffplay` 链路通，实测 `play.sh 晴天` → 播放「一直是晴天_2 — 许茹芸」，`stop.sh` 可停。
+- **`后座` 在库中 0 命中**（`周杰伦`/`晴天` 正常）→ 需 9哥 确认歌名或歌手；不是链路问题。
+- `wechat-send` 尚未实发（会真的发出去）：等 9哥 指定对象与内容再测一次，先验「标题不匹配即中止」。
