@@ -1,5 +1,42 @@
 # HANDOFF — ESP32 桌面小智（ABCD 四视图调研收口）
 
+## 现状快照（2026-11-02 12:3x，压缩前校准 · 以本节为准）
+
+### 正在运行的东西
+| 组件 | 端口/PID | 说明 |
+|---|---|---|
+| 语音服务 `com.bakey.esp32-voice` | 4410/4411，pid 19252/19253 | 读 `config.local.yaml`（`config.yaml` 是它的软链） |
+| ESP32 专属 Hermes 网关 `com.bakey.hermes-esp32` | 8643，pid 23221 | profile `~/.hermes-esp32`，独立 key，telegram 关闭 |
+| Telegram 网关 `ai.hermes.gateway` | 8642，pid 28617 | 主 profile `~/.hermes`，**不要动** |
+| 设备 | `/dev/cu.usbmodem31301` | ESP32-S3，MAC `80:b5:4e:cd:0f:64` |
+
+### 已经改好的配置
+- 语音服务 LLM 指向 **8643**（`config.local.yaml:85`）；key 在 `~/.hermes/.env` 的 `HERMES_API_KEY`（Esp32VoiceService 启动时 source 该文件）。
+- `~/.hermes-esp32/SOUL.md`：语音终端人格（纯口语、无 Markdown、2–3 句、数字口语、对外动作先确认、不念密钥）。
+- `~/.hermes-esp32/skills/nas-music`：`play.sh <关键词>` / `stop.sh`，凭据 `NAVIDROME_*` 在 `.env`（600）。
+  **实测通过**（`晴天` 播放/停止正常）；「后座」在库中 0 命中。
+- `~/.hermes-esp32/skills/wechat-send`：`send.sh <联系人> <消息>`，两道闸——非微信前置拒绝输入、无同名聊天窗口不发送。
+  **未打通**：搜索/⌘N/菜单切窗口都打不开目标聊天（前台争焦点），**从未成功发出过消息**。
+
+### 固件状态
+- HEAD `f7ef573b`（触摸 I2C 容错，修冷启动重启循环）；**未打 tag**，`v2.5.3-persona.7` 尚未发布。
+- 板上已刷该 app（`0x20000`，2,864,688 B）；冷启动（拨 ON）验证**尚未回传结果**。
+- 已发布：`v2.5.3-persona.6`（去 TF + BOOT 短按唤醒，已验证可用）。
+
+### 我这轮犯的错（教训）
+1. 文档里写过真实内网 IP → privacy-scan 抓红两次，已改占位符；规则：提交前 `git grep -nE '192\.168\.'`。
+2. 重启了共享网关 8642（Telegram）→ 已隔离出 8643，今后只动 `com.bakey.hermes-esp32`。
+3. `pkill -f osascript` 宽匹配误杀 Telegram 网关包装器 → 已恢复；今后按完整命令行匹配。
+4. `wechat-send` 早期版本焦点不在微信也发 `keystroke`，字打进前台 App（9哥 看到乱码）→ 已加焦点闸并停用自动化。
+
+### 下一步（按优先级）
+1. 微信技能：改 AX 直接点聊天列表行（不用搜索框），或改为只在语音链路里跑；先验「发出去且没发错人」。
+2. 固件 `persona.7` 发布：等 9哥 拨 ON 冷启动确认不循环 → 打 tag + 上传 merged/app/SHA256SUMS。
+3. 「后座」歌名/歌手确认后重测音乐技能。
+4. `conversation.timeout_seconds: 30` 是死配置（src 无引用），可清理。
+
+---
+
 phase-close: task-4
 收口时间：2026-10-29 23:1x（Dev Team·单仓库：lead + impl-repro / impl-arch / impl-report + reviewer-a / reviewer-b / reviewer-c + verifier / verifier-2）
 
