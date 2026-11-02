@@ -595,7 +595,7 @@ bootloader/app checksum 与 validation hash 均 valid。
   无 PMU、无 load switch 控制）。是否加「长按 BOOT = 深度睡眠 / 短按唤醒」需 9哥 定（会与长按恢复出厂冲突）。
 
 ### 隐私事故与修复（2026-11-02 11:0x，必须记住）
-- 我在 HANDOFF 里写了真实内网地址 `192.168.5.27`（3 处），privacy-scan 在 `cafedc9` 抓红；
+- 我在 HANDOFF 里写了真实内网地址（3 处，已替换为占位符），privacy-scan 在 `cafedc9` 抓红；
   已在 `c67a5ec` 全部替换为 `<server-ip>` 并 push，扫描恢复 success。
 - 暴露内容仅内网 IP（无 SSID/口令/MAC/token），窗口约 20 分钟；未改写历史（遵守"禁 force push"）。
 - 教训：写 HANDOFF/文档时**任何**真实地址一律先用占位符，写完立刻 `git grep -nE '192\.168\.'` 自查再提交。
