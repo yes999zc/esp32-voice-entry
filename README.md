@@ -2,6 +2,10 @@
 
 [中文](#中文) · [English](#english)
 
+![设备控制台概览 / Device console overview](docs/images/console.png)
+
+*控制台预览，画面中的设备状态为演示数据。 / Console preview with example device data.*
+
 ## 中文
 
 **给桌面添一个能听、能看、会说话的 AI 伙伴。** ESP32 Voice Entry 将 ESP32-S3 设备、语音服务和网页控制台连接在一起，让你用唤醒词开启对话，也能通过屏幕和摄像头与 AI 互动。
