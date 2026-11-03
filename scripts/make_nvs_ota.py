@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build a 16 KB NVS partition image that stores ``wifi/ota_url`` on the device.
+"""Build a 16 KB NVS partition image for the OTA URL and optional pairing token.
 
 Why this script lives in *this* (server) repo
 ---------------------------------------------
-The blob it produces contains one thing: the URL of *your* OTA server, i.e. this
-repo's ``/xiaozhi/ota/`` endpoint. The flashing recipe and the provisioning notes
+The blob stores the URL of *your* OTA server and, when requested, the private
+WebSocket pairing token. The flashing recipe and the provisioning notes
 that make sense of it are also here (``docs/quickstart-single-board.md``,
 ``docs/firmware-release.md``). The firmware repo stays vendor-shaped, and nothing
 in it needs to know which LAN address your server happens to have today.
@@ -28,6 +28,7 @@ Usage
     python3 scripts/make_nvs_ota.py --url http://<server-ip>:4411
     python3 scripts/make_nvs_ota.py --url http://<server-ip>:4411/xiaozhi/ota/   # same bytes
     python3 scripts/make_nvs_ota.py --url https://voice.example.com --out /tmp/nvs-ota.bin
+    python3 scripts/make_nvs_ota.py --url https://voice.example.com --device-token-file ~/.esp32-voice/device.token
 
     # then, with the board in download mode:
     esptool.py --chip esp32s3 -p <serial-port> write-flash 0x9000 /tmp/nvs-ota.bin
@@ -47,6 +48,7 @@ import argparse
 import csv
 import hashlib
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -104,6 +106,10 @@ def parse_args(argv=None):
         "--keep-csv",
         metavar="PATH",
         help="Also write the intermediate CSV to PATH (debugging)",
+    )
+    parser.add_argument(
+        "--device-token-file",
+        help="Also provision websocket/token from this private file (0600)",
     )
     return parser.parse_args(argv)
 
@@ -175,12 +181,15 @@ def find_generator():
     return gen
 
 
-def write_csv(path, url):
+def write_csv(path, url, device_token=None):
     with open(path, "w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(["key", "type", "encoding", "value"])
         writer.writerow([NAMESPACE, "namespace", "", ""])
         writer.writerow([KEY, "data", "string", url])
+        if device_token is not None:
+            writer.writerow(["websocket", "namespace", "", ""])
+            writer.writerow(["token", "data", "string", device_token])
 
 
 def main(argv=None):
@@ -189,27 +198,40 @@ def main(argv=None):
         url = normalize_url(args.url)
         size = parse_size(args.size)
         generator = find_generator()
-    except (ValueError, RuntimeError) as exc:
+        device_token = None
+        if args.device_token_file:
+            device_token = Path(args.device_token_file).expanduser().read_text().strip()
+            if not re.fullmatch(r"[A-Za-z0-9_-]{32,}", device_token):
+                raise ValueError("device token is missing or has an invalid format")
+    except (OSError, ValueError, RuntimeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
     out_path = Path(args.out).expanduser()
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    if device_token is not None:
+        fd = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        os.close(fd)
+        out_path.chmod(0o600)
 
     with tempfile.TemporaryDirectory(prefix="nvs-ota-") as tmpdir:
         csv_path = Path(tmpdir) / "ota_url.csv"
-        write_csv(csv_path, url)
+        write_csv(csv_path, url, device_token)
         if args.keep_csv:
             keep = Path(args.keep_csv).expanduser()
             keep.parent.mkdir(parents=True, exist_ok=True)
-            keep.write_text(csv_path.read_text(encoding="utf-8"), encoding="utf-8")
+            fd = os.open(keep, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(csv_path.read_text(encoding="utf-8"))
+            keep.chmod(0o600)
 
         cmd = [sys.executable, str(generator), "generate", str(csv_path), str(out_path), str(size)]
         print("+ " + " ".join(cmd[:-2] + [str(out_path), str(size)]))
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            sys.stderr.write(result.stdout)
-            sys.stderr.write(result.stderr)
+            output = result.stdout + result.stderr
+            sys.stderr.write(output.replace(device_token, "<redacted>")
+                             if device_token else output)
             print(f"error: nvs_partition_gen.py failed (exit {result.returncode})", file=sys.stderr)
             return 1
 
@@ -218,6 +240,8 @@ def main(argv=None):
     print(f"namespace: {NAMESPACE}  key: {KEY}")
     print(f"input: {args.url}")
     print(f"stored value (NVS wifi/{KEY}): {url}")
+    if device_token is not None:
+        print("device pairing: websocket/token included (value hidden)")
     print(f"image: {out_path}  {len(blob)} bytes  sha256 {digest}")
     print(
         f"flash: esptool.py --chip esp32s3 -p <serial-port> write-flash "

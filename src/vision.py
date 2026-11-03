@@ -14,6 +14,7 @@ import datetime
 import json
 import os
 import re
+import secrets
 import time
 from contextlib import suppress
 from pathlib import Path
@@ -100,6 +101,12 @@ def _parse_reminder_when(value: str, now: datetime.datetime) -> datetime.datetim
 
 def make_router(cfg: dict, sessions, tts=None, resample=None, mute_state=None):
     """Return an `app -> None` registrar for the OTA aiohttp app."""
+
+    # The board polls /debug/mute even while its WebSocket is closed. Keep a
+    # wake request until the board acknowledges it on a later poll, so an HTTP
+    # response lost in transit does not silently discard the command.
+    wake_pending: str | None = None
+    wake_last_ack: str | None = None
 
     def _catchup_status() -> dict:
         """Queue depth + catch-up counters, without creating a controller."""
@@ -489,6 +496,7 @@ def make_router(cfg: dict, sessions, tts=None, resample=None, mute_state=None):
 
     async def debug_mute_get(request: web.Request) -> web.Response:
         """B1 mute status: the switch, mode A note, frame counters, catch-up."""
+        nonlocal wake_pending, wake_last_ack
         state = mute_state if mute_state is not None else mute.get_state()
         if state is None:
             return web.json_response({"ok": False, "error": "mute not configured"},
@@ -496,7 +504,35 @@ def make_router(cfg: dict, sessions, tts=None, resample=None, mute_state=None):
         body = {"ok": True}
         body.update(state.status())
         body["catchup"] = _catchup_status()
+        if request.headers.get("X-Wake-Poll") == "1":
+            ack = request.headers.get("X-Wake-Ack", "")
+            if wake_pending is not None and ack == wake_pending:
+                wake_last_ack, wake_pending = wake_pending, None
+                print(f"[wake] acknowledged {wake_last_ack}", flush=True)
+            body["wake_id"] = wake_pending if not state.muted else None
         return web.json_response(body)
+
+    async def debug_wake_get(request: web.Request) -> web.Response:
+        """Inspect the one-shot remote wake command without consuming it."""
+        return web.json_response({"ok": True, "pending": wake_pending,
+                                  "last_ack": wake_last_ack})
+
+    async def debug_wake_post(request: web.Request) -> web.Response:
+        """Queue a wake for the next board poll; the microphone must be unmuted."""
+        nonlocal wake_pending
+        state = mute_state if mute_state is not None else mute.get_state()
+        if state is None:
+            return web.json_response({"ok": False, "error": "mute not configured"},
+                                     status=503)
+        if state.muted:
+            return web.json_response({"ok": False, "error": "unmute before wake"},
+                                     status=409)
+        queued = wake_pending is None
+        if queued:
+            wake_pending = secrets.token_hex(8)
+            print(f"[wake] queued {wake_pending}", flush=True)
+        return web.json_response({"ok": True, "wake_id": wake_pending,
+                                  "queued": queued})
 
     async def debug_mute_set(request: web.Request) -> web.Response:
         """Flip the server-side mute switch and persist it (same truth as 4410).
@@ -601,6 +637,8 @@ def make_router(cfg: dict, sessions, tts=None, resample=None, mute_state=None):
         app.router.add_get("/debug/proactive/status", debug_proactive_status)
         app.router.add_get("/debug/mute", debug_mute_get)
         app.router.add_post("/debug/mute", debug_mute_set)
+        app.router.add_get("/debug/wake", debug_wake_get)
+        app.router.add_post("/debug/wake", debug_wake_post)
         app.router.add_post("/debug/reminder", debug_reminder_create)
         app.router.add_get("/debug/reminder", debug_reminder_list)
         app.router.add_delete("/debug/reminder/{reminder_id}", debug_reminder_delete)

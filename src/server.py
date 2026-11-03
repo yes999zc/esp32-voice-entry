@@ -1,6 +1,7 @@
 """WebSocket entrypoint for the ESP32 desktop terminal."""
 import argparse
 import asyncio
+import hmac
 import signal
 import time
 from pathlib import Path
@@ -66,6 +67,13 @@ async def main(config_path: Path):
         print(f"[init] filler ready: {list(filler_cache)}", flush=True)
 
     async def handler(ws):
+        auth = ws.request.headers.get("Authorization", "")
+        scheme, _, presented = auth.partition(" ")
+        if scheme.lower() != "bearer" or not hmac.compare_digest(
+                presented.strip(), device_token):
+            print(f"[auth] rejected WebSocket client {ws.remote_address}", flush=True)
+            await ws.close(code=1008, reason="device pairing required")
+            return
         session = Session(ws, cfg, codec, tts, asr, llm, filler_cache=filler_cache,
                           mute=mute_state)
         print(f"[conn] {ws.remote_address}", flush=True)
@@ -77,6 +85,7 @@ async def main(config_path: Path):
         loop.add_signal_handler(sig, stop.set)
 
     control_token = ota.resolve_control_token(cfg)
+    device_token = ota.resolve_device_token(cfg)
     # The device expects the camera token on POST /xiaozhi/vision; empty config
     # means "reuse the control token" so no extra secret has to be managed.
     cfg["server"]["vision_token"] = ota.effective_vision_token(cfg, control_token)

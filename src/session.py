@@ -13,6 +13,7 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
+from websockets.exceptions import ConnectionClosed
 
 import persona
 import protocol
@@ -732,18 +733,20 @@ class Session:
 
     # ---------------- main loop ----------------
     async def run(self):
-        if not await self.handshake():
-            await self.ws.close()
-            return
-        vad_cfg = self.cfg["vad"]
-        vad = build_vad(self.cfg["vad"]["model"], vad_cfg["min_silence"],
-                        vad_cfg["min_speech"], vad_cfg["max_speech"])
         try:
+            if not await self.handshake():
+                await self.ws.close()
+                return
+            vad_cfg = self.cfg["vad"]
+            vad = build_vad(self.cfg["vad"]["model"], vad_cfg["min_silence"],
+                            vad_cfg["min_speech"], vad_cfg["max_speech"])
             async for raw in self.ws:
                 if isinstance(raw, bytes):
                     await self._on_audio(raw, vad)
                 else:
                     await self._on_json(raw, vad)
+        except ConnectionClosed:
+            pass
         except Exception as exc:  # connection-level; keep the process alive
             self.log("connection error", type(exc).__name__, exc)
         finally:

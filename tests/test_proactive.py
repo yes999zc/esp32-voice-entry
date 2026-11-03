@@ -521,6 +521,7 @@ async def test_proactive_status_returns_counters(tmp_path):
 async def test_status_after_a_dry_run_trigger(tmp_path):
     async with running(route_cfg(tmp_path), [RouteSession()]) as client:
         controller = proactive.get_controller()
+        controller._clock = lambda: NOW
         await controller.fire(trigger())
         resp = await client.get("/debug/proactive/status", headers=auth())
         body = await resp.json()

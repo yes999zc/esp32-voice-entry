@@ -6,7 +6,7 @@ server:
   vision_url: http://<mac-lan-ip>:4411/xiaozhi/vision  # where take_photo POSTs
   vision_token: ""     # empty = reuse the control token below; set to override
   timezone_minutes: 480
-  device_token: ""     # empty = no auth (LAN only)
+  device_token: ""     # empty = read security.device_token_file; never publish it
 
 # Control-plane auth for the 4411 HTTP app. Only POST /xiaozhi/ota/,
 # GET /notify/{name} and GET /screen/{name} stay anonymous; every other route
@@ -16,6 +16,7 @@ server:
 # start when neither exists. Rotate by deleting the file and restarting.
 security:
   control_token_file: ~/.esp32-voice/control.token
+  device_token_file: ~/.esp32-voice/device.token  # generated once; pair the board with scripts/pair_firmware.py
 
 # Server-side mute switch (B1, mode A). `/debug/mute` and `scripts/mute.py`
 # flip it; the 4410 Session drops every uplink frame before Opus decode, so no

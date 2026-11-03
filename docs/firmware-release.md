@@ -1,5 +1,8 @@
 # 固件发布/回滚校验（2026-10-28 收口）
 
+> 本页记录 2026-10-28 旧构建点的发布过程。2026-11-04 已在固件仓库修复
+> `XIAOZHI_OTA_BASE` 的构建路径展开；当前构建命令以 [部署指南](deployment.md) 为准。
+
 仓库：`05_Tools/xiaozhi-esp32`，分支 `feat/persona-face`。
 - `origin` = `https://github.com/yes999zc/xiaozhi-esp32.git`（fork，ssh 推送）
 - `upstream` = `https://github.com/78/xiaozhi-esp32.git`（保留，不推）

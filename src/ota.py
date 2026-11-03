@@ -23,6 +23,7 @@ from pathlib import Path
 from aiohttp import web
 
 DEFAULT_CONTROL_TOKEN_FILE = "~/.esp32-voice/control.token"
+DEFAULT_DEVICE_TOKEN_FILE = "~/.esp32-voice/device.token"
 
 # The device cannot attach a header on these four calls: OTA happens before it
 # has read any capability, the media URLs are handed to the firmware's audio and
@@ -97,6 +98,35 @@ def resolve_control_token(cfg: dict) -> str:
     return token
 
 
+def resolve_device_token(cfg: dict) -> str:
+    """Persistent pairing secret for the board's WebSocket Authorization header.
+
+    Never return this in the anonymous OTA response. The matching value must be
+    placed in the board's private build configuration before flashing.
+    """
+    configured = (cfg.get("server") or {}).get("device_token") or ""
+    if configured:
+        return configured.strip()
+    name = (cfg.get("security") or {}).get("device_token_file",
+                                             DEFAULT_DEVICE_TOKEN_FILE)
+    path = Path(name).expanduser()
+    try:
+        token = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        token = ""
+    if token:
+        return token
+    token = secrets.token_urlsafe(32)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(path.parent, 0o700)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(token + "\n")
+    os.chmod(path, 0o600)
+    print(f"[auth] generated device pairing token -> {path}", flush=True)
+    return token
+
+
 def effective_vision_token(cfg: dict, control_token: str) -> str:
     """What MCP initialize pushes as capabilities.vision.token.
 
@@ -148,7 +178,7 @@ def build_app(cfg: dict, extras=(), control_token: str | None = None) -> web.App
         version = body.get("application", {}).get("version", "?")
         print(f"[ota] {app_name} v{version} -> {ws_url}", flush=True)
         return web.json_response({
-            "websocket": {"url": ws_url, "token": "", "version": 1},
+            "websocket": {"url": ws_url, "version": 1},
             "server_time": {
                 "timestamp": int(time.time() * 1000),
                 "timezone_offset": tz_minutes,

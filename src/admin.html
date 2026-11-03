@@ -227,6 +227,51 @@
     .login { margin: 18px auto; padding: 20px 16px; }
     .grid { grid-template-columns: 1fr 1fr; }
   }
+
+  /* Workspace refresh */
+  :root { --paper:#f4f6f4; --card:#fff; --ink:#142c29; --muted:#667b75;
+    --line:#e2eae6; --line-strong:#ccdcd4; --accent:#116b58;
+    --accent-soft:#dff3ea; --radius:16px; --shadow:0 12px 35px rgba(26,68,53,.05); }
+  body { font-size:15px; }
+  .top { background:rgba(255,255,255,.94); padding:16px max(24px,calc((100vw - 1200px)/2)); }
+  .brand .zh { font-size:19px; letter-spacing:-.03em; }
+  .brand .zh:before { content:'◉'; color:#18a17a; margin-right:10px; }
+  .brand .en { letter-spacing:.06em; }
+  main { max-width:1200px; padding:38px 24px 80px; }
+  .tabs { margin-left:36px; gap:8px; }
+  .tab { border-radius:10px; font-weight:600; }
+  .primary { background:#146c59; border-color:#146c59; }
+  .ghost,.primary { min-height:40px; border-radius:10px; }
+  .card { box-shadow:var(--shadow); }
+  .login { max-width:760px; margin:48px auto; padding:40px; }
+  .login h1 { font-size:32px; letter-spacing:-.04em; }
+  .login .field { margin-top:24px; flex-wrap:nowrap; }
+  .login .field input { flex:1; }
+  .eyebrow { color:#138268; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; margin-bottom:12px; }
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:30px; }
+  .step { padding:16px; border-radius:12px; background:#f3f8f5; font-size:13px; color:#526b60; }
+  .step strong { display:block; color:#146c59; margin-bottom:6px; font-size:12px; }
+  .hero { display:flex; align-items:center; justify-content:space-between; gap:24px; background:#183e36; color:white; padding:30px 34px; border-radius:20px; margin-bottom:22px; }
+  .hero h1 { font-size:28px; line-height:1.25; letter-spacing:-.04em; margin:5px 0 8px; }
+  .hero p { color:#c3dcd0; max-width:55ch; }
+  .hero .eyebrow { color:#8be1b5; margin:0; }
+  .hero-actions { display:flex; gap:10px; flex-wrap:wrap; }
+  .hero .primary { background:#c7f2db; color:#103c2f; border-color:#c7f2db; }
+  .hero .ghost { background:transparent; color:white; border-color:#668a79; }
+  .section-title { display:flex; align-items:end; justify-content:space-between; margin:30px 0 14px; }
+  .section-title h2 { font-size:19px; }
+  .section-title p { color:var(--muted); font-size:13px; }
+  .grid { grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); }
+  .stat { min-height:105px; padding:20px; }
+  .stat .v { font-size:23px; }
+  .block { padding:24px; }
+  :focus-visible { outline:3px solid #51b995; outline-offset:3px; }
+  @media(max-width:640px) { .top { padding:12px 16px; } .tabs { margin-left:0; }
+    main { padding:22px 16px 60px; } .hero { align-items:flex-start; flex-direction:column; padding:24px; }
+    .hero h1 { font-size:24px; } .login { margin:16px auto; padding:24px; }
+    .login .field { flex-wrap:wrap; } .steps { grid-template-columns:1fr; gap:8px; margin-top:20px; }
+    .step { padding:12px 14px; } }
+
 </style>
 </head>
 <body>
@@ -251,19 +296,30 @@
 <main>
   <!-- login -->
   <section class="card login" id="login">
-    <h1 data-i18n="loginTitle">连接控制台</h1>
+    <p class="eyebrow">ESP32 VOICE ENTRY / CONTROL CENTER</p>
+    <h1 data-i18n="loginTitle">欢迎回来，连接你的设备</h1>
     <p class="lede" data-i18n="loginLede">输入控制 token 后即可读取状态并操作设备。token 只保存在这台浏览器的 localStorage 里，不会出现在 URL 或页面源码中。</p>
     <form id="loginForm" class="field" autocomplete="off">
       <input type="password" id="tokenInput" data-i18n-ph="tokenPlaceholder"
              placeholder="控制 token" autocomplete="current-password" spellcheck="false">
       <button class="primary" type="submit" id="loginBtn" data-i18n="connect">连接</button>
     </form>
-    <p class="note" id="loginNote" data-i18n="loginNote">token 在服务端 ~/.esp32-voice/control.token（0600），或由 ESP32_CONTROL_TOKEN 提供。</p>
+    <p class="note" id="loginNote" data-i18n="loginNote">在运行服务的电脑上查看 ~/.esp32-voice/control.token，复制内容到上方。</p>
+    <div class="steps" aria-label="Getting started">
+      <div class="step"><strong>01 / START</strong><span data-i18n="stepStart">启动服务，让电脑与设备连接同一网络。</span></div>
+      <div class="step"><strong>02 / CONNECT</strong><span data-i18n="stepConnect">输入控制令牌，进入你的控制台。</span></div>
+      <div class="step"><strong>03 / EXPLORE</strong><span data-i18n="stepExplore">查看设备状态，调整音量或唤醒设备。</span></div>
+    </div>
   </section>
 
   <!-- overview -->
   <section class="panel active" id="panel-overview">
-    <p class="lede" data-i18n="overviewLede">一眼看现状。卡片只显示设备真的报上来的字段；拿不到就写「—」，不猜。</p>
+    <div class="hero">
+      <div><p class="eyebrow">YOUR DESK COMPANION</p><h1 data-i18n="heroTitle">你的桌面伙伴</h1><p data-i18n="heroText">在这里查看设备状态，轻松开始一次对话。</p></div>
+      <div class="hero-actions"><button class="primary" id="wakeBtn" data-i18n="wakeBtn">唤醒设备</button><button class="ghost" id="overviewRefresh" data-i18n="refresh">刷新</button></div>
+    </div>
+    <p class="note" id="wakeStatus" aria-live="polite" data-i18n="wakeHelp">唤醒前请先解除静音；设备忙碌时会在空闲后处理。</p>
+    <div class="section-title"><div><h2 data-i18n="statusTitle">设备状态</h2><p data-i18n="overviewLede">设备实际报告的信息，暂无数据时显示 —。</p></div></div>
     <div class="grid" id="stats"></div>
     <div class="card block" style="margin-top:18px">
       <header><h2 data-i18n="remindersTitle">未到点提醒</h2><span class="hint" id="remindersHint"></span></header>
@@ -285,7 +341,7 @@
         </div>
         <button class="ghost" id="muteRefresh" data-i18n="refresh">刷新状态</button>
       </div>
-      <p class="note" data-i18n="muteNote">口径 A：服务端在解码前丢帧，设备仍会采集并上传。屏幕不会显示「已静音」，那条要等 B2。</p>
+      <p class="note" data-i18n="muteNote">静音后暂停语音输入；解除静音后才能远程唤醒。</p>
     </div>
 
     <div class="card block">
@@ -362,24 +418,27 @@
   var I18N = {
     zh: {
       brand: "桌面同事",
+      stepStart: "启动服务，让电脑与设备连接同一网络。", stepConnect: "输入控制令牌，进入你的控制台。", stepExplore: "查看设备状态，调整音量或唤醒设备。",
+      heroTitle: "你的桌面伙伴", heroText: "在这里查看设备状态，轻松开始一次对话。", statusTitle: "设备状态", wakeBtn: "唤醒设备", wakeHelp: "唤醒前请先解除静音；设备忙碌时会在空闲后处理。", wakeQueued: "唤醒请求已发送，正在等待设备确认。", wakeDone: "设备已接受唤醒请求。", wakePending: "请求仍在等待设备：请确认设备在线且未静音。", wakeMuted: "请先到“控制”页面解除静音。", wakeUnknown: "暂时无法确认静音状态，请先刷新。",
+
       navOverview: "概览", navControl: "控制", navDiag: "诊断",
       connUnknown: "未连接", connOn: "已连接", connOff: "连接失败",
       logout: "退出",
-      loginTitle: "连接控制台",
+      loginTitle: "欢迎回来，连接你的设备",
       loginLede: "输入控制 token 后即可读取状态并操作设备。token 只保存在这台浏览器的 localStorage 里，不会出现在 URL 或页面源码中。",
       tokenPlaceholder: "控制 token",
       connect: "连接", connecting: "验证中…",
-      loginNote: "token 在服务端的控制 token 文件里（0600），或由环境变量提供。",
+      loginNote: "在运行服务的电脑上打开 ~/.esp32-voice/control.token，复制内容到上方。",
       tokenBad: "token 无效，请重新输入。",
       tokenOk: "已连接。",
       overviewLede: "一眼看现状。卡片只显示设备真的报上来的字段；拿不到就写「—」，不猜。",
       remindersTitle: "未到点提醒", remindersEmpty: "没有待触发的提醒。", remindersCount: "共 {n} 条",
-      controlLede: "全部走现有 /debug/* 接口，没有新的执行通道。每次操作都会在这里留下结果。",
+      controlLede: "调整声音、表情和屏幕，或用文字开始对话。",
       muteTitle: "静音", muteLabel: "总开关", muteOn: "静音", muteOff: "恢复",
-      muteNote: "口径 A：服务端在解码前丢帧，设备仍会采集并上传。屏幕不会显示「已静音」，那条要等 B2。",
+      muteNote: "静音后暂停语音输入；解除静音后才能远程唤醒。",
       volumeTitle: "音量", volumeLabel: "设备音量", apply: "应用",
       faceTitle: "表情", faceHint: "推一次表情，不走对话回合",
-      viewTitle: "屏幕视图", viewHint: "A/B/C/D = set_view 0..3",
+      viewTitle: "屏幕视图", viewHint: "切换设备屏幕的显示内容",
       shotTitle: "截屏", shotHint: "设备端截当前屏幕，回传到服务端",
       shotTake: "截一张", shotReload: "看最新", shotEmpty: "还没有截图",
       shotSaved: "截图已保存。", shotNoSession: "设备没有会话，截不到。",
@@ -408,24 +467,27 @@
     },
     en: {
       brand: "Desk Console",
+      stepStart: "Start the service and connect your computer and device to the same network.", stepConnect: "Enter your control token to open the console.", stepExplore: "Check the device, adjust its volume, or wake it up.",
+      heroTitle: "Your desk companion.", heroText: "Check on your device and start a conversation.", statusTitle: "Device status", wakeBtn: "Wake device", wakeHelp: "Unmute first. If the device is busy, it will wake when idle.", wakeQueued: "Wake request sent. Waiting for the device to confirm.", wakeDone: "The device accepted the wake request.", wakePending: "Still waiting. Make sure the device is online and unmuted.", wakeMuted: "Please unmute the device on the Control page first.", wakeUnknown: "Mute status is unavailable. Please refresh first.",
+
       navOverview: "Overview", navControl: "Control", navDiag: "Diagnostics",
       connUnknown: "not connected", connOn: "connected", connOff: "connection failed",
       logout: "Sign out",
-      loginTitle: "Connect",
+      loginTitle: "Welcome to your desk",
       loginLede: "Paste the control token to read state and drive the device. It stays in this browser's localStorage and never appears in the URL or the page source.",
       tokenPlaceholder: "control token",
       connect: "Connect", connecting: "checking…",
-      loginNote: "The token lives in the server's control-token file (0600) or comes from an env var.",
+      loginNote: "On the computer running the service, open ~/.esp32-voice/control.token and paste its contents above.",
       tokenBad: "Token rejected — try again.",
       tokenOk: "Connected.",
       overviewLede: "The current state at a glance. Cards only show fields the device actually reports; missing values read — instead of a guess.",
       remindersTitle: "Pending reminders", remindersEmpty: "No reminder is waiting.", remindersCount: "{n} total",
-      controlLede: "Everything goes through the existing /debug/* routes; no new execution path. Each action leaves its result below.",
+      controlLede: "Adjust sound, expressions and the screen, or start a conversation with text.",
       muteTitle: "Mute", muteLabel: "Master switch", muteOn: "Mute", muteOff: "Unmute",
-      muteNote: "Mode A: the server drops frames before decoding, the device still captures and uploads. The screen does not show a muted badge yet (that is B2).",
+      muteNote: "Mute pauses voice input. Unmute before waking the device remotely.",
       volumeTitle: "Volume", volumeLabel: "Device volume", apply: "Apply",
       faceTitle: "Expression", faceHint: "one push, no conversation turn",
-      viewTitle: "Screen view", viewHint: "A/B/C/D = set_view 0..3",
+      viewTitle: "Screen view", viewHint: "Choose what appears on the device screen",
       shotTitle: "Screenshot", shotHint: "the device captures its screen and uploads it",
       shotTake: "Capture", shotReload: "Load latest", shotEmpty: "No screenshot yet",
       shotSaved: "Screenshot saved.", shotNoSession: "No live session — nothing to capture.",
@@ -1185,6 +1247,28 @@
       $("turnNote").textContent = t("turnSent");
       toast(t("turnSent"), "ok");
       logAction("turn " + text, "ok");
+    });
+  });
+
+  // A queued request is not the same as a device acknowledgement.
+  $("overviewRefresh").addEventListener("click", refreshAll);
+  $("wakeBtn").addEventListener("click", function () {
+    var button = $("wakeBtn");
+    if (state.muted !== false) { $("wakeStatus").textContent = t(state.muted === true ? "wakeMuted" : "wakeUnknown"); return; }
+    button.disabled = true;
+    api("/debug/wake", { method: "POST", body: {} }).then(function (res) {
+      if (!res.ok) { button.disabled = false; if (res.status === 409) { $("wakeStatus").textContent = t("wakeMuted"); } else { fail(res, "wake"); } return; }
+      var id = res.data.wake_id, attempts = 0;
+      $("wakeStatus").textContent = t("wakeQueued");
+      function poll() {
+        if (!state.token) { button.disabled = false; return; }
+        api("/debug/wake").then(function (status) {
+          if (status.ok && status.data.last_ack === id) { $("wakeStatus").textContent = t("wakeDone"); button.disabled = false; return; }
+          if (++attempts >= 12 || !status.ok) { $("wakeStatus").textContent = t("wakePending"); button.disabled = false; return; }
+          setTimeout(poll, 1000);
+        });
+      }
+      setTimeout(poll, 1000);
     });
   });
 

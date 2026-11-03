@@ -33,7 +33,8 @@ def make_cfg(tmp_path, vision_token=""):
             "timezone_minutes": 480,
             "ota_port": 4411,
         },
-        "security": {"control_token_file": str(tmp_path / "control.token")},
+        "security": {"control_token_file": str(tmp_path / "control.token"),
+                     "device_token_file": str(tmp_path / "device.token")},
     }
 
 
@@ -88,6 +89,17 @@ def test_token_read_from_file(tmp_path, monkeypatch):
     assert ota.resolve_control_token(cfg) == "stored-token"
 
 
+def test_device_pairing_token_is_private_and_persistent(tmp_path):
+    cfg = make_cfg(tmp_path)
+    token = ota.resolve_device_token(cfg)
+    path = tmp_path / "device.token"
+    assert len(token) >= 32
+    assert token != ota.resolve_control_token(cfg)
+    assert path.read_text().strip() == token
+    assert (path.stat().st_mode & 0o777) == 0o600
+    assert ota.resolve_device_token(cfg) == token
+
+
 def test_vision_token_choice(tmp_path):
     cfg = make_cfg(tmp_path)
     assert ota.effective_vision_token(cfg, CONTROL) == CONTROL
@@ -136,6 +148,37 @@ async def test_good_token_ok(tmp_path):
         assert (await resp.json())["sent"] == 0
 
 
+async def test_remote_wake_requires_unmute_and_ack(tmp_path):
+    class FakeMute:
+        muted = True
+
+        def status(self):
+            return {"muted": self.muted}
+
+    state = FakeMute()
+    cfg = make_cfg(tmp_path)
+    app = ota.build_app(
+        cfg, extras=(vision.make_router(cfg, lambda: [], mute_state=state),),
+        control_token=CONTROL)
+    async with running(app) as client:
+        assert (await client.post("/debug/wake")).status == 401
+        assert (await client.post("/debug/wake", headers=auth(CONTROL))).status == 409
+        state.muted = False
+        resp = await client.post("/debug/wake", headers=auth(CONTROL))
+        assert resp.status == 200
+        wake_id = (await resp.json())["wake_id"]
+        assert wake_id
+        # A normal status read cannot consume a command intended for the board.
+        await client.get("/debug/mute", headers=auth(CONTROL))
+        poll = {**auth(CONTROL), "X-Wake-Poll": "1"}
+        assert (await (await client.get("/debug/mute", headers=poll)).json())["wake_id"] == wake_id
+        assert (await (await client.get("/debug/mute", headers=poll)).json())["wake_id"] == wake_id
+        poll["X-Wake-Ack"] = wake_id
+        assert (await (await client.get("/debug/mute", headers=poll)).json())["wake_id"] is None
+        status = await (await client.get("/debug/wake", headers=auth(CONTROL))).json()
+        assert status == {"ok": True, "pending": None, "last_ack": wake_id}
+
+
 async def test_control_routes_401(tmp_path):
     cfg = make_cfg(tmp_path)
     protected = [
@@ -162,7 +205,9 @@ async def test_ota_anonymous(tmp_path):
         resp = await client.post("/xiaozhi/ota/", json={
             "application": {"name": "xiaozhi", "version": "2.0.0"}})
         assert resp.status == 200
-        assert (await resp.json())["websocket"]["url"] == cfg["server"]["ws_url"]
+        websocket = (await resp.json())["websocket"]
+        assert websocket["url"] == cfg["server"]["ws_url"]
+        assert "token" not in websocket
 
 
 async def test_media_anonymous(tmp_path):

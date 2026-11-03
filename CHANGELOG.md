@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] - 2026-11-04
+
+- Refreshed bilingual console with onboarding, device overview and remote wake.
+- Added a bilingual introduction, deployment guide and AI-assisted setup prompts.
+- Added device pairing and acknowledged remote wake for compatible firmware.
+
 ## [0.1.0] - 2026-10-28
 
 First externally usable release.
