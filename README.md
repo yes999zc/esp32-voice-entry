@@ -6,6 +6,16 @@
 
 *控制台预览，画面中的设备状态为演示数据。 / Console preview with example device data.*
 
+### 板载屏幕视图 / Device screen views
+
+| A · 状态与日志 / Status & activity | B · 状态卡片 / Status cards |
+| :---: | :---: |
+| ![A 视图：状态与日志](docs/images/device-view-a.jpg) | ![B 视图：状态卡片](docs/images/device-view-b.jpg) |
+| **C · 日志 / Activity log** | **D · 恐龙游戏 / Dino game** |
+| ![C 视图：日志](docs/images/device-view-c.jpg) | ![D 视图：恐龙游戏](docs/images/device-view-d.jpg) |
+
+*均为实机截图；D 为 2026 年 10 月 29 日拍摄。 / Captured on the device; view D was captured on October 29, 2026.*
+
 ## 中文
 
 **给桌面添一个能听、能看、会说话的 AI 伙伴。** ESP32 Voice Entry 将 ESP32-S3 设备、语音服务和网页控制台连接在一起，让你用唤醒词开启对话，也能通过屏幕和摄像头与 AI 互动。
