@@ -20,6 +20,14 @@ ESP32 Voice Entry
 
 *均为实机截图；D 为 2026 年 10 月 29 日拍摄。 / Captured on the device; view D was captured on October 29, 2026.*
 
+### Desk Mate Cube
+
+<img src="docs/images/desk-mate-cube.jpg" alt="Desk Mate Cube 实机界面 / device screen" width="240">
+
+专为 240 × 240 Cube 屏幕设计的简洁界面。[查看板型与按键说明](https://github.com/yes999zc/xiaozhi-esp32/blob/main/main/boards/nologo/xingzhi-cube-1.54tft-wifi/README-desk-mate.md)。
+
+A streamlined interface designed for the Cube's 240 × 240 display. [Board and button guide](https://github.com/yes999zc/xiaozhi-esp32/blob/main/main/boards/nologo/xingzhi-cube-1.54tft-wifi/README-desk-mate.md).
+
 ## 中文
 
 **给桌面添一个能听、能看、会说话的 AI 伙伴。** Desk Mate 将 ESP32-S3 设备、语音服务和网页控制台连接在一起，让你用唤醒词开启对话，也能通过屏幕和摄像头与 AI 互动。
