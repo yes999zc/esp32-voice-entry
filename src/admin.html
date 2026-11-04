@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>桌面同事 · 控制台</title>
+<title>Desk Mate · 桌面伙伴</title>
+<link rel="icon" type="image/png" href="/admin/logo.png">
 <!--
   Single-file admin console for the 4411 control plane.
 
   Design notes:
-  - No framework, no build step: one HTML file, inline CSS/JS.
+  - No framework or build step: inline CSS/JS and a local logo asset.
   - The page itself is anonymous (GET /admin), every byte of data is not:
     all calls below go to the existing Bearer-protected /debug/* routes.
   - The control token lives in localStorage only. It is never put in the URL,
@@ -60,7 +61,7 @@
     backdrop-filter: saturate(140%) blur(6px);
     border-bottom: 1px solid var(--line);
   }
-  .brand { display: flex; align-items: baseline; gap: 8px; }
+  .brand { display: flex; align-items: center; gap: 8px; }
   .brand .zh { font-family: inherit; font-size: 18px; font-weight: 600; }
   .brand .en { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   .tabs { display: flex; gap: 4px; flex: 1 1 auto; overflow-x: auto; }
@@ -235,7 +236,7 @@
   body { font-size:15px; }
   .top { background:rgba(255,255,255,.94); padding:16px max(24px,calc((100vw - 1200px)/2)); }
   .brand .zh { font-size:19px; letter-spacing:-.03em; }
-  .brand .zh:before { content:'◉'; color:#18a17a; margin-right:10px; }
+  .brand img { width:38px; height:38px; object-fit:contain; flex:none; }
   .brand .en { letter-spacing:.06em; }
   main { max-width:1200px; padding:38px 24px 80px; }
   .tabs { margin-left:36px; gap:8px; }
@@ -278,8 +279,9 @@
 
 <header class="top">
   <div class="brand">
-    <span class="zh" data-i18n="brand">桌面同事</span>
-    <span class="en">Console</span>
+    <img src="/admin/logo.png" alt="" aria-hidden="true">
+    <span class="zh" data-i18n="brand">桌面伙伴</span>
+    <span class="en" data-i18n="brandSecondary">Desk Mate</span>
   </div>
   <nav class="tabs" role="tablist" aria-label="sections">
     <button class="tab" role="tab" id="tab-overview" aria-selected="true" data-view="overview" data-i18n="navOverview">概览</button>
@@ -296,7 +298,7 @@
 <main>
   <!-- login -->
   <section class="card login" id="login">
-    <p class="eyebrow">ESP32 VOICE ENTRY / CONTROL CENTER</p>
+    <p class="eyebrow">DESK MATE / CONTROL CENTER</p>
     <h1 data-i18n="loginTitle">欢迎回来，连接你的设备</h1>
     <p class="lede" data-i18n="loginLede">输入控制 token 后即可读取状态并操作设备。token 只保存在这台浏览器的 localStorage 里，不会出现在 URL 或页面源码中。</p>
     <form id="loginForm" class="field" autocomplete="off">
@@ -417,7 +419,8 @@
   // ---------- i18n ----------
   var I18N = {
     zh: {
-      brand: "桌面同事",
+      brand: "桌面伙伴",
+      brandSecondary: "Desk Mate",
       stepStart: "启动服务，让电脑与设备连接同一网络。", stepConnect: "输入控制令牌，进入你的控制台。", stepExplore: "查看设备状态，调整音量或唤醒设备。",
       heroTitle: "你的桌面伙伴", heroText: "在这里查看设备状态，轻松开始一次对话。", statusTitle: "设备状态", wakeBtn: "唤醒设备", wakeHelp: "唤醒前请先解除静音；设备忙碌时会在空闲后处理。", wakeQueued: "唤醒请求已发送，正在等待设备确认。", wakeDone: "设备已接受唤醒请求。", wakePending: "请求仍在等待设备：请确认设备在线且未静音。", wakeMuted: "请先到“控制”页面解除静音。", wakeUnknown: "暂时无法确认静音状态，请先刷新。",
 
@@ -466,7 +469,8 @@
       errOther: "操作失败（HTTP {code}）。"
     },
     en: {
-      brand: "Desk Console",
+      brand: "Desk Mate",
+      brandSecondary: "桌面伙伴",
       stepStart: "Start the service and connect your computer and device to the same network.", stepConnect: "Enter your control token to open the console.", stepExplore: "Check the device, adjust its volume, or wake it up.",
       heroTitle: "Your desk companion.", heroText: "Check on your device and start a conversation.", statusTitle: "Device status", wakeBtn: "Wake device", wakeHelp: "Unmute first. If the device is busy, it will wake when idle.", wakeQueued: "Wake request sent. Waiting for the device to confirm.", wakeDone: "The device accepted the wake request.", wakePending: "Still waiting. Make sure the device is online and unmuted.", wakeMuted: "Please unmute the device on the Control page first.", wakeUnknown: "Mute status is unavailable. Please refresh first.",
 

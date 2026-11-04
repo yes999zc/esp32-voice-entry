@@ -1,4 +1,8 @@
-# ESP32 Voice Entry
+<img src="src/desk-mate-logo.png" alt="Desk Mate logo" width="112">
+
+# Desk Mate / 桌面伙伴
+
+ESP32 Voice Entry
 
 [中文](#中文) · [English](#english)
 
@@ -18,7 +22,7 @@
 
 ## 中文
 
-**给桌面添一个能听、能看、会说话的 AI 伙伴。** ESP32 Voice Entry 将 ESP32-S3 设备、语音服务和网页控制台连接在一起，让你用唤醒词开启对话，也能通过屏幕和摄像头与 AI 互动。
+**给桌面添一个能听、能看、会说话的 AI 伙伴。** Desk Mate 将 ESP32-S3 设备、语音服务和网页控制台连接在一起，让你用唤醒词开启对话，也能通过屏幕和摄像头与 AI 互动。
 
 - 语音唤醒、识别、回答、语音播报和打断。
 - 表情、屏幕视图、音量控制，以及支持的设备工具。
@@ -36,7 +40,7 @@
 把下面的提示词复制给有终端访问能力的 AI 助手，按提示提供自己的环境信息即可：
 
 ```text
-请作为我的部署助手，帮助没有单片机经验的我部署 ESP32 Voice Entry。
+请作为我的部署助手，帮助没有单片机经验的我部署 Desk Mate（ESP32 Voice Entry）。
 先阅读本仓库 README、docs/deployment.md、config.example.yaml 和相关脚本，
 再检查我的操作系统、Python、ESP32 板型、串口、网络和已有模型。
 根据实际情况逐步指导或执行服务安装、模型配置、设备配对、刷机和连接测试。
@@ -52,7 +56,7 @@
 
 ## English
 
-**An AI companion for your desk that can listen, see and speak.** ESP32 Voice Entry brings an ESP32-S3 device, a voice service and a browser console together for wake-word conversations and screen or camera interactions.
+**An AI companion for your desk that can listen, see and speak.** Desk Mate brings an ESP32-S3 device, a voice service and a browser console together for wake-word conversations and screen or camera interactions.
 
 - Wake-word detection, speech recognition, responses, speech playback and interruption.
 - Expressions, screen views, volume control and supported device tools.
@@ -70,7 +74,7 @@ The service and [device firmware](https://github.com/yes999zc/xiaozhi-esp32) are
 Copy this prompt to an AI assistant with terminal access:
 
 ```text
-Please help me deploy ESP32 Voice Entry as a beginner.
+Please help me deploy Desk Mate (ESP32 Voice Entry) as a beginner.
 First read this repository's README, docs/deployment.md, config.example.yaml,
 and relevant scripts. Inspect my OS, Python, ESP32 board, serial port, network,
 and available models before proposing steps. Guide me through or perform setup,

@@ -30,21 +30,19 @@ DEFAULT_DEVICE_TOKEN_FILE = "~/.esp32-voice/device.token"
 # display players, and `self.screen.snapshot` POSTs its frame to /debug/upload
 # before it can know our control token. Everything else requires the token.
 #
-# `/admin` is anonymous for a different reason: it is the console's own login
-# screen. The page ships no secret and every byte of data it shows comes from a
-# Bearer-protected /debug route, so gating the shell would only force a human to
-# paste an Authorization header into a browser.
+# The console login shell and its logo are public; device data comes from
+# Bearer-protected /debug routes.
 _ANONYMOUS_GET = (
     re.compile(r"/notify/[^/]+"),
     re.compile(r"/screen/[^/]+"),
     re.compile(r"/admin/?"),
+    re.compile(r"/admin/logo\.png"),
 )
 
 ADMIN_PAGE = Path(__file__).with_name("admin.html")
+ADMIN_LOGO = Path(__file__).with_name("desk-mate-logo.png")
 
-# One static file with inline CSS/JS: 'unsafe-inline' is required for
-# script/style, and everything else is locked down. There is no network origin
-# in the page - all calls are same-origin relative paths.
+# Inline CSS/JS requires 'unsafe-inline'; network access stays same-origin.
 _ADMIN_CSP = (
     "default-src 'none'; "
     "script-src 'unsafe-inline'; "
@@ -204,6 +202,11 @@ def build_app(cfg: dict, extras=(), control_token: str | None = None) -> web.App
                                      "Referrer-Policy": "no-referrer",
                                      "X-Content-Type-Options": "nosniff"})
 
+    async def admin_logo(request: web.Request) -> web.StreamResponse:
+        if not ADMIN_LOGO.is_file():
+            raise web.HTTPNotFound()
+        return web.FileResponse(ADMIN_LOGO, headers={"X-Content-Type-Options": "nosniff"})
+
     app = web.Application(client_max_size=8 << 20,
                           middlewares=[make_auth_middleware(control_token,
                                                             vision_token)])
@@ -211,6 +214,7 @@ def build_app(cfg: dict, extras=(), control_token: str | None = None) -> web.App
     app.router.add_get("/xiaozhi/ota/", health)
     app.router.add_get("/admin", admin)
     app.router.add_get("/admin/", admin)
+    app.router.add_get("/admin/logo.png", admin_logo)
     for extra in extras or ():
         extra(app)
     return app

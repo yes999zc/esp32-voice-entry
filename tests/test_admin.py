@@ -89,6 +89,15 @@ async def test_admin_page_cache_and_csp(tmp_path):
         assert "http://" not in csp and "https://" not in csp
 
 
+async def test_admin_logo_is_available_before_login(tmp_path):
+    async with running(build_app(make_cfg(tmp_path))) as client:
+        resp = await client.get("/admin/logo.png")
+        assert resp.status == 200
+        assert resp.content_type == "image/png"
+        assert (await resp.read()).startswith(b"\x89PNG\r\n\x1a\n")
+        assert (await client.get("/admin/other.png")).status == 401
+
+
 async def test_admin_html_file_is_not_whitelisted(tmp_path):
     """Only the two page paths are anonymous; the source file is not a route."""
     cfg = make_cfg(tmp_path)
