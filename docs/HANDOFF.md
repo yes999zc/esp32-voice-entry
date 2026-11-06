@@ -784,8 +784,13 @@ bootloader/app checksum 与 validation hash 均 valid。
   `ClientConnectorError`）。
 - 密钥：语音服务 `src/llm.py` 优先读 `HERMES_API_KEY`，网关认 `API_SERVER_KEY`。两者不等会 401。
   已把 `~/.hermes/.env` 的 `HERMES_API_KEY` 对齐成 `API_SERVER_KEY` 同一个值（48 位）。
-- 服务重启（**杀两个进程**，只杀外壳会 `port 4410 already in use`）：
-  `pkill -f "Esp32VoiceService.app/Contents/MacOS"; for p in $(lsof -nP -iTCP:4410 -sTCP:LISTEN -t); do kill $p; done; sleep 4; open -a /Applications/Esp32VoiceService.app`
+- 服务重启（**2026-11-06 更新，旧命令作废**）：LaunchAgent `com.bakey.esp32-voice` 现在直接
+  `exec` 仓库里的 `scripts/run_service.sh`，重启就一条：
+  `launchctl kickstart -k gui/$(id -u)/com.bakey.esp32-voice`
+  不要再 `open -a /Applications/Esp32VoiceService.app`：那个旧外壳已在 11-06 移出 `/Applications`，
+  且再开一份会撞 4410/4411。旧的 `pkill -f "Esp32VoiceService.app/Contents/MacOS"` 也不要再用，
+  它会把自己启动的进程和 launchd 托管的那份搞混。排查用 `launchctl print gui/$(id -u)/com.bakey.esp32-voice`
+  与 `lsof -nP -iTCP:4410 -iTCP:4411 -sTCP:LISTEN`。
 - 网关重启 agent 干不了（守卫拦自杀式重启，cron 里也会被拦），只能在终端由人工执行 `hermes gateway restart`。
 
 ### 微信发送：老的 wechat-send / AX 判据全部作废
@@ -819,3 +824,36 @@ bootloader/app checksum 与 validation hash 均 valid。
 2. Esp32VoiceService 的辅助功能权限：已由 9哥 手动授予，重启后端到端可用。
 3. 固件侧（persona.7 发布、冷启动循环确认）本轮未动，仍按上文 11:1x 那节执行。
 4. `conversation.timeout_seconds: 30` 仍是死配置，可清理。
+
+---
+
+## 2026-11-06：现状核对与仓库收尾（本轮，**以上一节为准，本节覆盖其待办 4**）
+
+### 运行实况（2026-11-06 12:2x–12:5x 实测，不是回忆）
+- launchd 托管：`com.bakey.esp32-voice`，`state = running`，pid 11743（本轮已 `runs = 8`），
+  入口 `scripts/run_service.sh` → 仓库 `.venv313`。4410/4411 都只有一个监听进程。
+- 设备在线：`GET /debug/mute` 的 `last_frame_at = 2026-11-06T12:24:32`，本会话 19 轮、5506 帧、
+  0 丢帧，**未静音**，`mode A`。Hermes 网关 8642 在跑。服务日志显示 12:21 仍在正常对话
+  （ASR 0.05 s、首帧 1.4–1.6 s、单轮 3–4 s）。
+- 鉴权已生效：`/admin` 匿名返回 200（控制台外壳），`GET /` 与 `/health` 未带 token 返回 401。
+- 全量 `pytest -q` 本机通过；另用 `config.example.yaml` 顶替 `config.yaml` 在干净副本里跑了一遍
+  （模拟 CI），**2008 项全过**，说明测试不依赖本机私密配置。
+
+### 本轮落地
+- `docs/audit-2026-11-04.md` 已脱敏入库（串口、MAC 后缀、LAN 地址、私有归档路径均涂掉；
+  原文件含 LAN IP，直接提交会挂 privacy-scan）。
+- `scripts/run_service.sh` 已入库 —— 之前它是未跟踪文件，但 launchd 正依赖它，属于"重启路径悬空"。
+- 新增 `.github/workflows/tests.yml`：ubuntu + Python 3.13 + `libopus0`，
+  复制 `config.example.yaml` 为 `config.yaml` 后跑全量 pytest；`privacy-scan` 保留。
+- `CHANGELOG.md` 补 0.2.1 条目，打 tag `v0.2.1`（HEAD 已含 Desk Mate 品牌化源码改动，
+  旧 `v0.2.0` 停在 `bc536ec`）。
+- 清理：删除未使用的 `.venv`（Python 3.15，收不到局域网入站），
+  旧 `/Applications/Esp32VoiceService.app` 外壳移入废纸篓。
+
+### 仍未做（下一步按优先级）
+1. **审计 5 项安全遗留**（原文见 `docs/audit-2026-11-04.md` §Remaining risks）：
+   WSS/HTTPS 与证书轮换；Secure Boot + Flash 加密；`/debug/upload` 加 token/限速/配额；
+   配网 SoftAP 认证；干净 `idf.py build` 复验。**WSS 应排第一**（明文 WS 会漏 device token）。
+2. B2 静音"端侧停传"（现在只有服务端丢帧，屏幕不显示静音）。
+3. 触摸 2 条修复；M7 六状态真机截图；微信发送链路真机复测；`conversation.timeout_seconds` 死配置清理。
+4. 固件侧 persona.7 / 冷启动循环仍按 11-02 11:1x 那节执行（本轮未动固件）。

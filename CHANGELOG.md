@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1] - 2026-11-06
+
+### Added
+- Desk Mate / 桌面伙伴 branding in the console, with the logo served from `/admin/logo.png`.
+- Console, on-device screen and Desk Mate Cube previews in the README.
+- A pytest GitHub Actions workflow (`.github/workflows/tests.yml`) running the full
+  suite on Python 3.13 against `config.example.yaml`.
+
+### Changed
+- The macOS launchd entrypoint (`scripts/run_service.sh`) is part of the repository;
+  restart with `launchctl kickstart -k gui/$(id -u)/com.bakey.esp32-voice`.
+- Committed the redacted 2026-11-04 security audit (`docs/audit-2026-11-04.md`).
+- `docs/HANDOFF.md` records the 2026-11-06 state check and the remaining security work.
+
 ## [0.2.0] - 2026-11-04
 
 - Refreshed bilingual console with onboarding, device overview and remote wake.
