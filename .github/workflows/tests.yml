@@ -1,0 +1,26 @@
+name: tests
+
+on: [push, pull_request]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # opuslib loads libopus at import time. Most tests stub it, but the suite
+      # must survive a real import on the runner.
+      - name: Install libopus
+        run: sudo apt-get update && sudo apt-get install -y libopus0
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      # config.yaml is a local-only symlink (gitignored). The suite reads the
+      # repo config in a few places, so give it the public example instead.
+      - name: Provide a config
+        run: cp config.example.yaml config.yaml
+      - name: Run tests
+        run: python -m pytest -q
